@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Trophy, Settings, CheckCircle, Clock, AlertCircle, Plus, Building2, User, MapPin, Linkedin, ExternalLink, Video, FileText } from 'lucide-react';
+import { Users, Trophy, Settings, CheckCircle, Clock, AlertCircle, Plus, Building2, User, MapPin, Linkedin, ExternalLink, Video, FileText, Trash } from 'lucide-react';
 import { useHackathon, TeamStatus } from '../contexts/HackathonContext';
 import ProfileEditor from './ProfileEditor';
 import EmailAutocomplete from './EmailAutocomplete';
@@ -17,7 +17,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
   onNavigate, 
   uiState
 }) => {
-  const { state, updateProject, updateAttendee, assignAttendeeToTeam, removeAttendeeFromTeam, updateAttendeeTeamStatus } = useHackathon();
+  const { state, updateProject, updateAttendee, assignAttendeeToTeam, removeAttendeeFromTeam, updateAttendeeTeamStatus, deleteProject } = useHackathon();
   const { currentUser, projects, bounties, attendees, challenges, goodies } = state;
   const isHacker = (a: any) => a && typeof a.id === 'string' && a.id.startsWith('att-') && !((a.team || '').toLowerCase().includes('sponsors') || (a.team || '').toLowerCase() === 'host' || (a.team || '').toLowerCase() === 'hosts');
   const hackerAttendees = attendees.filter(isHacker);
@@ -58,6 +58,20 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
 
   const handleRemoveFromTeam = async (attendeeId: string) => {
     await removeAttendeeFromTeam(attendeeId);
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    const project = state.projects.find(p => p.id === projectId);
+    if (!project) return;
+    const ok = window.confirm(`Delete project "${project.name}"? This will also unassign its members.`);
+    if (!ok) return;
+    // Unassign all attendees from this project
+    const members = state.attendees.filter(a => a.projectId === projectId);
+    for (const a of members) {
+      await removeAttendeeFromTeam(a.id);
+    }
+    // Delete the project
+    await deleteProject(projectId);
   };
 
   const renderDashboard = () => (
@@ -151,6 +165,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
               <th className="text-left p-3 text-gray-300">Status</th>
               <th className="text-left p-3 text-gray-300">Challenges</th>
               <th className="text-left p-3 text-gray-300">Links</th>
+              <th className="text-left p-3 text-gray-300">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -225,6 +240,15 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
                       </a>
                     )}
                   </div>
+                </td>
+                <td className="p-3">
+                  <button
+                    onClick={() => handleDeleteProject(project.id)}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-red-500/20 border border-red-500/30 rounded text-red-300 hover:bg-red-500/30 text-xs"
+                    title="Delete project"
+                  >
+                    <Trash className="w-3 h-3" /> Delete
+                  </button>
                 </td>
               </tr>
             ))}

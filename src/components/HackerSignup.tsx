@@ -116,7 +116,7 @@ const HackerSignup: React.FC<HackerSignupProps> = ({ formData: _formData, setFor
 
     await login(hackerUser);
     onLogin(hackerUser);
-    onNavigate('projectQuestions', {});
+    onNavigate('hackerProject', {});
   };
   
   const renderAccountSelection = () => (

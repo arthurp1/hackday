@@ -97,6 +97,13 @@ const HackerProject: React.FC<HackerProjectProps> = ({
     return `${first}${last ? ' ' + last.charAt(0).toUpperCase() + '.' : ''}`.trim() || 'Hacker';
   };
 
+  // Resolve sponsor website from attendees (sponsors are represented as attendees with sponsorId)
+  const getSponsorWebsite = (sponsorId: string | undefined) => {
+    if (!sponsorId) return undefined;
+    const sponsor = state.attendees.find((a: any) => a.sponsorId === sponsorId);
+    return sponsor?.profile?.website as string | undefined;
+  };
+
   // Guard: prevent adding hackers who already have a team/project
   const canAddEmail = (email: string): { ok: boolean; reason?: string } => {
     const attendee = state.attendees.find(a => a.email === email);
@@ -600,12 +607,6 @@ const HackerProject: React.FC<HackerProjectProps> = ({
 
         {activeTab === 'team' && (
           <div className="space-y-4">
-            {/* Info */}
-            {project.teamMembers && project.teamMembers.filter(e => e && e.trim()).length <= 1 && (
-              <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-sm text-blue-300">
-                You’re currently the only team member. Add teammates by selecting their name below, or join another project by asking that project’s creator to add you.
-              </div>
-            )}
 
             {/* Current Team Members as tags (no emails) */}
             <div>
@@ -639,6 +640,12 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                 className="w-full"
               />
             </div>
+              {/* Info */}
+              {project.teamMembers && project.teamMembers.filter(e => e && e.trim()).length <= 1 && (
+              <div className="p-3 rounded-lg text-sm text-blue-300">
+                 Add teammates by selecting their name, or join another project by asking someone to add you.
+              </div>
+            )}
 
             {/* Leave Team (if there is another member) */}
             {project.teamMembers && project.teamMembers.includes(currentUser?.email || '') && project.teamMembers.filter(e => e && e.trim()).length > 1 && (
@@ -694,12 +701,24 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                             className={`w-4 h-4 text-green-600 bg-gray-800 border-gray-600 rounded focus:ring-green-500 mt-1 ${enrollmentLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
                           />
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 pb-1 border-b border-white/10">
                               <Icon className="w-4 h-4 text-green-400" />
-                              <span className="font-medium text-white">{challenge.title}</span>
-                              <span className="text-green-400 font-bold">
-                                {challenge.prizes?.[0]?.currency}{challenge.prizes?.[0]?.amount}
-                              </span>
+                              <span className="font-medium text-gray-300">{challenge.title}</span>
+                              {challenge.prizes?.[0] && (
+                                <span className="text-xs text-gray-400">
+                                  {challenge.prizes[0].currency}{challenge.prizes[0].amount}
+                                </span>
+                              )}
+                              {getSponsorWebsite(challenge.sponsorId) && (
+                                <a
+                                  href={getSponsorWebsite(challenge.sponsorId)!}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-cyan-400 hover:text-cyan-300 underline text-2xs ml-2"
+                                >
+                                  {new URL(getSponsorWebsite(challenge.sponsorId)!).hostname}
+                                </a>
+                              )}
                               {isRecommended && (
                                 <span className="px-2 py-1 bg-purple-500/30 text-purple-300 rounded-full text-xs">
                                   Recommended
@@ -707,10 +726,26 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                               )}
                             </div>
                             <p className="text-sm text-gray-300 mb-2">{challenge.description}</p>
+                            {challenge.tags && challenge.tags.length > 0 && (
+                              <div className="mb-2 flex flex-wrap gap-1">
+                                {challenge.tags.map((t, idx) => (
+                                  <span key={t+idx} className="px-2 py-0.5 rounded-full text-2xs border border-white/10 text-gray-300">{t}</span>
+                                ))}
+                              </div>
+                            )}
                             <div className="text-xs text-gray-300 space-y-1">
                               {challenge.requirements.map((req, idx) => (
                                 <div key={idx}>• {req}</div>
                               ))}
+                              {challenge.prizes && challenge.prizes.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {challenge.prizes.map((p, i) => (
+                                    <span key={i} className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-2xs text-gray-300">
+                                      {p.currency}{p.amount} {p.details}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </label>
@@ -744,12 +779,24 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                             className="w-4 h-4 text-green-600 bg-gray-800 border-gray-600 rounded focus:ring-green-500 mt-1"
                           />
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 pb-1 border-b border-white/10">
                               <Icon className="w-4 h-4 text-green-400" />
-                              <span className="font-medium text-white">{challenge.title}</span>
-                              <span className="text-green-400 font-bold">
-                                {challenge.prizes?.[0]?.currency}{challenge.prizes?.[0]?.amount}
-                              </span>
+                              <span className="font-medium text-gray-300">{challenge.title}</span>
+                              {challenge.prizes?.[0] && (
+                                <span className="text-xs text-gray-400">
+                                  {challenge.prizes[0].currency}{challenge.prizes[0].amount}
+                                </span>
+                              )}
+                              {getSponsorWebsite(challenge.sponsorId) && (
+                                <a
+                                  href={getSponsorWebsite(challenge.sponsorId)!}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-cyan-400 hover:text-cyan-300 underline text-2xs ml-2"
+                                >
+                                  {new URL(getSponsorWebsite(challenge.sponsorId)!).hostname}
+                                </a>
+                              )}
                               {isRecommended && (
                                 <span className="px-2 py-1 bg-purple-500/30 text-purple-300 rounded-full text-xs">
                                   Recommended
@@ -757,10 +804,26 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                               )}
                             </div>
                             <p className="text-sm text-gray-300 mb-2">{challenge.description}</p>
+                            {challenge.tags && challenge.tags.length > 0 && (
+                              <div className="mb-2 flex flex-wrap gap-1">
+                                {challenge.tags.map((t, idx) => (
+                                  <span key={t+idx} className="px-2 py-0.5 rounded-full text-2xs border border-white/10 text-gray-300">{t}</span>
+                                ))}
+                              </div>
+                            )}
                             <div className="text-xs text-gray-300 space-y-1">
                               {challenge.requirements.map((req, idx) => (
                                 <div key={idx}>• {req}</div>
                               ))}
+                              {challenge.prizes && challenge.prizes.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {challenge.prizes.map((p, i) => (
+                                    <span key={i} className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-2xs text-gray-300">
+                                      {p.currency}{p.amount} {p.details}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </label>

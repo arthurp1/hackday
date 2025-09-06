@@ -203,9 +203,21 @@ const reviveDates = (s: any): any => {
   } as HackathonState;
 };
 
+// Try to synchronously read currentUser from localStorage so auth persists across refresh instantly
+const readSessionUser = (): User | null => {
+  try {
+    const saved = localStorage.getItem('hackathon-session');
+    if (!saved) return null;
+    const session = JSON.parse(saved);
+    const age = Date.now() - new Date(session.timestamp).getTime();
+    if (session.currentUser && age < 24 * 60 * 60 * 1000) return session.currentUser as User;
+  } catch {}
+  return null;
+};
+
 // Initial empty state; hydrated from Neon/localStorage (or one-time seed migration)
 const initialState: HackathonState = {
-  currentUser: null,
+  currentUser: readSessionUser(),
   projects: [],
   challenges: [],
   bounties: [],
@@ -534,8 +546,7 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
       Object.keys(revived.winners?.bounty || {}).forEach(bountyId => {
         dispatch({ type: 'SET_WINNER_BOUNTY', payload: { bountyId, projectId: revived.winners?.bounty[bountyId] } });
       });
-      // Save to session for persistence
-      saveSession();
+      // Do NOT touch auth session here; preserve existing currentUser across data imports
       return { success: true };
     } catch (e) {
       console.error('Failed to import state JSON', e);
@@ -567,7 +578,7 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
           }
           return;
         }
-        // 3) One-time migration from assets/state.json (if available) → import + save to Neon and LS
+        // 3) One-time migration from assets/state.json (or assets/backup.json) → import + save to Neon and LS
         const migrated = localStorage.getItem('hackathon-migration-done');
         if (!migrated) {
           try {
@@ -579,6 +590,21 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
               localStorage.setItem('hackathon-persist', json);
               if (hasNeon()) {
                 try { await saveStateToDB(JSON.parse(json)); } catch {}
+              }
+              localStorage.setItem('hackathon-migration-done', 'true');
+              return;
+            }
+          } catch {}
+          // Fallback to backup.json
+          try {
+            const url2 = new URL('../assets/backup.json', import.meta.url).href;
+            const res2 = await fetch(url2);
+            if (res2.ok) {
+              const json2 = await res2.text();
+              await importStateJson(json2);
+              localStorage.setItem('hackathon-persist', json2);
+              if (hasNeon()) {
+                try { await saveStateToDB(JSON.parse(json2)); } catch {}
               }
               localStorage.setItem('hackathon-migration-done', 'true');
               return;
@@ -614,6 +640,22 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
       if (persistTimer.current) window.clearTimeout(persistTimer.current);
     };
   }, [state.currentUser, state.projects, state.challenges, state.bounties, state.goodies, state.attendees, state.faq, state.phase, state.winners]);
+
+  // Ensure auth is stable at app level: if currentUser becomes null but a valid session exists, restore it.
+  React.useEffect(() => {
+    if (!state.currentUser) {
+      try {
+        const saved = localStorage.getItem('hackathon-session');
+        if (saved) {
+          const session = JSON.parse(saved);
+          const age = Date.now() - new Date(session.timestamp).getTime();
+          if (session.currentUser && age < 24 * 60 * 60 * 1000) {
+            dispatch({ type: 'SET_CURRENT_USER', payload: session.currentUser });
+          }
+        }
+      } catch {}
+    }
+  }, [state.currentUser]);
 
   // Mock API functions
   const login = async (user: User): Promise<void> => {

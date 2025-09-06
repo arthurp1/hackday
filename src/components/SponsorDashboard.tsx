@@ -279,33 +279,6 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
 
   return (
     <div className="quiz-panel h-[70vh] justify-start overflow-hidden">
-      {/* Profile Notification (clickable, dismissible) */}
-      {currentUser && (!currentUser.profile?.city || !currentUser.profile?.linkedin) && (() => {
-        const dismissedKey = `profile-banner-dismissed-${currentUser.email}`;
-        const isDismissed = typeof window !== 'undefined' && localStorage.getItem(dismissedKey) === 'true';
-        if (isDismissed) return null;
-        return (
-          <div
-            className="fixed top-4 right-4 z-20 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg backdrop-blur-md cursor-pointer group"
-            onClick={() => setShowProfileEditor(true)}
-            role="button"
-            aria-label="Complete your profile"
-          >
-            <div className="flex items-center gap-2 text-yellow-400 text-sm">
-              <User className="w-4 h-4" />
-              <span className="group-hover:text-yellow-200">Complete your profile</span>
-              <button
-                onClick={(e) => { e.stopPropagation(); localStorage.setItem(dismissedKey, 'true'); (document.activeElement as HTMLElement)?.blur(); }}
-                className="ml-2 text-yellow-300 hover:text-yellow-100"
-                aria-label="Dismiss"
-                title="Dismiss"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        );
-      })()}
 
       <div className="quiz-header">
         <div className="flex items-center gap-3">

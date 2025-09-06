@@ -9,7 +9,6 @@ import WelcomeScreen from './WelcomeScreen';
 import HostLogin from './HostLogin';
 import SponsorLogin from './SponsorLogin';
 import HackerSignup from './HackerSignup';
-import ProjectQuestions from './ProjectQuestions';
 import ProjectSetup from './ProjectSetup';
 import HackerProject from './HackerProject';
 import HostDashboard from './HostDashboard';
@@ -60,6 +59,17 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
     const map = (state.winners?.challenge || {}) as Record<string, string>;
     return ch.every((c: any) => !!map[c.type]);
   };
+
+  // If logged in, never show Welcome/Signup/Login screens; force route to the correct home
+  useEffect(() => {
+    const user = state.currentUser;
+    if (!showUI || !user) return;
+    const disallowed = new Set(['welcome', 'hostLogin', 'sponsorLogin', 'hackerSignup']);
+    if (disallowed.has(currentScreen)) {
+      const target = user.type === 'host' ? 'hostDashboard' : user.type === 'sponsor' ? 'sponsorDashboard' : 'hackerProject';
+      setCurrentScreen(target);
+    }
+  }, [state.currentUser, showUI, currentScreen]);
   // Save portal animations preference
   useEffect(() => {
     localStorage.setItem('portal-animations-enabled', JSON.stringify(portalAnimationsEnabled));
@@ -127,8 +137,7 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
             if (hasProject) {
               setCurrentScreen('hackerProject');
             } else if (!session.currentUser.onboardingCompleted) {
-              setCurrentScreen('projectQuestions');
-            } else {
+              // Skip questions; go straight to project
               setCurrentScreen('hackerProject');
             }
           } else if (session.currentUser.type === 'host') {
@@ -157,6 +166,19 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
   }, [speedSettings.portalIntroTime]);
 
   const navigateToScreen = (screen: string, data?: any, skipAnimation = false) => {
+    // If logged in, do not allow navigation to pre-login screens
+    const user = state.currentUser;
+    const preLogin = new Set(['welcome', 'hostLogin', 'sponsorLogin', 'hackerSignup']);
+    const routeForUser = (u: any): string => {
+      if (!u) return 'welcome';
+      if (u.type === 'host') return 'hostDashboard';
+      if (u.type === 'sponsor') return 'sponsorDashboard';
+      return 'hackerProject';
+    };
+    if (user && preLogin.has(screen)) {
+      screen = routeForUser(user);
+      skipAnimation = true;
+    }
     // Skip animation for edit modes, tabs, and related views
     const noAnimationScreens = [
       'projectEditor', 'attendeeManager', 'bountyEditor',
@@ -241,7 +263,6 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
       'hostLogin': 'welcome',
       'sponsorLogin': 'welcome', 
       'hackerSignup': 'welcome',
-      'projectQuestions': 'hackerSignup',
       'projectSetup': 'hackerSignup',
       // Back navigation intentionally disabled for non-onboarding screens
     };
@@ -277,8 +298,7 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
         return <SponsorLogin {...screenProps} />;
       case 'hackerSignup':
         return <HackerSignup {...screenProps} />;
-      case 'projectQuestions':
-        return <ProjectQuestions {...screenProps} />;
+      
       case 'projectSetup':
         return <ProjectSetup {...screenProps} />;
       case 'hackerProject':
@@ -308,7 +328,7 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
 
   if (!showUI) return null;
 
-  const onboardingScreens = ['hostLogin', 'sponsorLogin', 'hackerSignup', 'projectQuestions', 'projectSetup'] as const;
+  const onboardingScreens = ['hostLogin', 'sponsorLogin', 'hackerSignup', 'projectSetup'] as const;
   const showBackButton = onboardingScreens.includes(currentScreen as any) && getBackNavigation() !== null && currentScreen !== 'welcome';
 
   return (
@@ -319,7 +339,8 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
         onLogout={handleLogout}
       />
       
-      {!((state.phase?.announce) && winnersPickedAll()) && (
+      {/* Hide timer if winners are being announced */}
+      {!(state.phase?.announce) && (
         <CountdownTimer />
       )}
       {showWinners && (
@@ -327,7 +348,7 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
           onClick={() => navigateToScreen('prizeAnnouncement', {}, true)}
           className="fixed top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2 bg-green-500/20 border border-green-500/40 text-green-300 rounded-lg backdrop-blur-md hover:bg-green-500/30 transition-colors"
         >
-          View Winners
+          {state.phase?.announce ? 'Winners' : state.phase?.votingOpen ? 'Voting' : 'View Winners'}
         </button>
       )}
       

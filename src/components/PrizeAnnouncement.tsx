@@ -21,10 +21,11 @@ const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiSta
     return () => clearInterval(timer);
   }, []);
 
-  // Check if it's after 18:30 (winner announcement time)
+  // Check if it's after 18:30 (winner announcement time) or phase explicitly announced
   const announcementTime = new Date();
   announcementTime.setHours(18, 30, 0, 0);
-  const showWinners = currentTime >= announcementTime;
+  const phaseAnnounced = !!(phase && phase.announce);
+  const showWinners = phaseAnnounced || currentTime >= announcementTime;
 
   const winnersPickedAll = () => {
     const ch = (challenges || []) as Array<{ type: ChallengeType }>;
@@ -32,7 +33,6 @@ const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiSta
     const map = (winners?.challenge || {}) as Partial<Record<ChallengeType, string>>;
     return ch.every((c) => !!map[c.type as ChallengeType]);
   };
-  const phaseAnnounced = !!(phase && phase.announce);
 
   const getProjectTeamMembers = (project: any) => {
     return (attendees as any[]).filter((attendee: any) => 
@@ -255,7 +255,8 @@ const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiSta
     </div>
   );
 
-  const winnersOnly = phaseAnnounced && winnersPickedAll();
+  // If announced, show winners-only view even if not all are picked yet
+  const winnersOnly = phaseAnnounced;
 
   return (
     <div className="quiz-panel">

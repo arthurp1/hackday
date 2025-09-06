@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useHackathon } from '../contexts/HackathonContext';
 import type { Attendee, Challenge, Project, Bounty } from '../contexts/HackathonContext';
-import { Trophy, Tag, ExternalLink, Video, Presentation, MapPin, Linkedin } from 'lucide-react';
+import { Trophy, Tag, ExternalLink, Video, Presentation, MapPin, Linkedin, Target } from 'lucide-react';
 
 interface EnrollmentProps {
   mode: 'host' | 'sponsor';
@@ -125,10 +125,6 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
     <div className="space-y-6">
       {/* Challenges Section */}
       <div>
-        <div className="flex items-center gap-2 mb-2">
-          <Trophy className="w-5 h-5 text-yellow-400" />
-          <h3 className="text-lg font-semibold text-white">Challenges</h3>
-        </div>
         <div className="space-y-3">
           {visibleChallenges.map((ch: Challenge) => {
             let enrolledProjects: Project[] = (projects as Project[]).filter((p: Project) => (p.challengesEnrolled || []).includes(ch.type));
@@ -138,10 +134,12 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
             }
             return (
               <div key={ch.id} className="p-4 bg-black/20 rounded-lg border border-white/10">
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/10">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-white">{ch.title}</span>
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-yellow-400" />
+                      <span className="font-semibold text-gray-300">{ch.title}</span>
+                      <span className="text-xs text-gray-400">€50</span>
                       {getSponsorWebsite(ch.sponsorId) && (
                         <a
                           href={getSponsorWebsite(ch.sponsorId)!}
@@ -160,7 +158,7 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
                     const winnerProject = (projects as Project[]).find((p: Project) => p.id === winnerId);
                     return winnerProject ? (
                       <div className="text-xs text-yellow-300 px-2 py-1 border border-yellow-500/30 rounded">
-                        Winner Selected: {winnerProject.name}
+                         {winnerProject.name}
                       </div>
                     ) : null;
                   })()}
@@ -175,13 +173,10 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
                         onClick={() => setOpenProjectId(id => id === p.id ? null : p.id)}
                         className="w-full text-left"
                       >
-                        <div className="flex items-center justify-between px-2 py-2 hover:bg-white/5 rounded border-b border-white/10">
+                        <div className="group flex items-center justify-between px-2 py-2 hover:bg-white/5 rounded border-b border-white/10">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-white font-medium">{p.name}</span>
-                              {getWinnerForChallenge(ch.type) === p.id && (
-                                <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-300 rounded-full text-2xs">Winner</span>
-                              )}
                               {p.startedFrom && (
                                 <span className="px-2 py-0.5 bg-white/5 text-gray-300 rounded-full text-2xs">
                                   {p.startedFrom === 'company' ? "It's my company" : p.startedFrom === 'some_code' ? 'Some code existed' : p.startedFrom === 'idea' ? 'Idea existed' : 'From scratch'}
@@ -207,13 +202,18 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
                             </div>
                           </div>
                           {mode === 'sponsor' && currentUser?.id === ch.sponsorId && !showWinnersOnly && (
-                            <button
-                              onClick={(e) => { e.preventDefault(); setWinnerForChallenge(p.id, ch.type); }}
-                              className={`px-2 py-1 rounded text-xs border ${getWinnerForChallenge(ch.type) === p.id ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}`}
-                              title={getWinnerForChallenge(ch.type) === p.id ? 'Winner Selected' : 'Winner'}
-                            >
-                              Winner
-                            </button>
+                            (() => {
+                              const isActive = getWinnerForChallenge(ch.type) === p.id;
+                              return (
+                                <button
+                                  onClick={(e) => { e.preventDefault(); setWinnerForChallenge(p.id, ch.type); }}
+                                  className={`${isActive ? '' : 'opacity-0 group-hover:opacity-100'} transition-opacity px-2 py-1 rounded text-xs border ${isActive ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}`}
+                                  title={isActive ? 'Winner Selected' : 'Winner'}
+                                >
+                                  Winner
+                                </button>
+                              );
+                            })()
                           )}
                         </div>
                       </button>
@@ -235,8 +235,6 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
       {visibleBounties.length > 0 && (
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <Trophy className="w-5 h-5 text-purple-400" />
-          <h3 className="text-lg font-semibold text-white">Bounties</h3>
         </div>
         <div className="space-y-3">
           {visibleBounties.map((b: Bounty) => {
@@ -250,13 +248,12 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
               <div key={b.id} className="p-4 bg-black/20 rounded-lg border border-white/10">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className="font-semibold text-white">
-                    {b.title}
                     {getSponsorWebsite(b.sponsorId as any) && (
                       <a
                         href={getSponsorWebsite(b.sponsorId as any)!}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-cyan-400 hover:text-cyan-300 underline text-2xs ml-2"
+                        className="text-cyan-400 hover:text-cyan-300 underline text-2xs"
                       >
                         {new URL(getSponsorWebsite(b.sponsorId as any)!).hostname}
                       </a>
@@ -311,13 +308,18 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
                             </div>
                           </div>
                           {mode === 'sponsor' && currentUser?.id === b.sponsorId && !showWinnersOnly && (
-                            <button
-                              onClick={(e) => { e.preventDefault(); setWinnerForBounty(p.id, b.id); }}
-                              className={`px-2 py-1 rounded text-xs border ${getWinnerForBounty(b.id) === p.id ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}`}
-                              title={getWinnerForBounty(b.id) === p.id ? 'Winner Selected' : 'Winner'}
-                            >
-                              Winner
-                            </button>
+                            (() => {
+                              const isActive = getWinnerForBounty(b.id) === p.id;
+                              return (
+                                <button
+                                  onClick={(e) => { e.preventDefault(); setWinnerForBounty(p.id, b.id); }}
+                                  className={`${isActive ? '' : 'opacity-0 group-hover:opacity-100'} transition-opacity px-2 py-1 rounded text-xs border ${isActive ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}`}
+                                  title={isActive ? 'Winner Selected' : 'Winner'}
+                                >
+                                  Winner
+                                </button>
+                              );
+                            })()
                           )}
                         </div>
                       </button>

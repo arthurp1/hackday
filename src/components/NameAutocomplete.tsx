@@ -38,9 +38,13 @@ const NameAutocomplete: React.FC<NameAutocompleteProps> = ({ onSelect, placehold
 
   const suggestions: Suggestion[] = useMemo(() => {
     const q = normalize(query).trim();
+    if (q.length < 1) return [];
     const base = attendees
-      // Only hackers (case-insensitive contains to be resilient to seed variants)
-      .filter((a: Attendee) => (a.team || '').toLowerCase().includes('hacker'))
+      // Treat everyone as hacker unless explicitly sponsor/host
+      .filter((a: Attendee) => {
+        const t = (a.team || '').toLowerCase();
+        return !(t.includes('sponsor') || t === 'host' || t === 'hosts');
+      })
       .map((a: Attendee): Suggestion => {
         const first = (a.firstName || a.name || '').trim();
         const last = (a.lastName || '').trim();
@@ -50,10 +54,7 @@ const NameAutocomplete: React.FC<NameAutocompleteProps> = ({ onSelect, placehold
       })
       .sort((a, b) => a.label.localeCompare(b.label));
 
-    const filtered = q
-      ? base.filter((s: Suggestion) => s.label.toLowerCase().includes(q) || s.full.toLowerCase().includes(q))
-      : base;
-
+    const filtered = base.filter((s: Suggestion) => s.label.toLowerCase().includes(q) || s.full.toLowerCase().includes(q));
     return filtered.slice(0, 8);
   }, [attendees, query]);
 
@@ -104,7 +105,7 @@ const NameAutocomplete: React.FC<NameAutocompleteProps> = ({ onSelect, placehold
         <Search className="w-4 h-4 text-gray-500" />
       </div>
 
-      {open && suggestions.length > 0 && (
+      {open && query.trim().length >= 1 && suggestions.length > 0 && (
         <div className="absolute z-20 mt-1 w-full bg-black/90 border border-white/10 rounded-lg max-h-56 overflow-auto shadow-xl">
           {suggestions.map((s: Suggestion, idx: number) => (
             <button
