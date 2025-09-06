@@ -82,6 +82,7 @@ const TriangleTunnel: React.FC<TriangleTunnelProps> = ({
   const timeRef = useRef(0);
   const cameraOffsetRef = useRef({ x: 0, y: 0 });
   const mouseRef = useRef({ x: 0, y: 0 });
+  const acceleratingRef = useRef(false);
   const targetRotationRef = useRef({ x: 0, y: 0 });
   const currentRotationRef = useRef({ x: 0, y: 0 });
   const materialsRef = useRef<THREE.ShaderMaterial[]>([]);
@@ -116,6 +117,11 @@ const TriangleTunnel: React.FC<TriangleTunnelProps> = ({
     }
   }, [isAccelerating, speedSettings.portalAccelSpeed, speedSettings.portalIdleSpeed]);
 
+  // Keep accelerating state in a ref for event handlers
+  useEffect(() => {
+    acceleratingRef.current = isAccelerating;
+  }, [isAccelerating]);
+
   // Optimized mouse move handler
   const handleMouseMove = useCallback((event: MouseEvent) => {
     // Normalize mouse coordinates to -1 to 1
@@ -123,8 +129,10 @@ const TriangleTunnel: React.FC<TriangleTunnelProps> = ({
     mouseRef.current.y = -(event.clientY / window.innerHeight) * 2 + 1;
     
     // Set target rotation based on mouse position
-    targetRotationRef.current.x = mouseRef.current.y * 0.1; // Tilt up/down
-    targetRotationRef.current.y = mouseRef.current.x * 0.1; // Tilt left/right
+    const base = 0.1;
+    const boost = acceleratingRef.current ? 0.25 : base; // wider angle when accelerating
+    targetRotationRef.current.x = mouseRef.current.y * boost; // Tilt up/down
+    targetRotationRef.current.y = mouseRef.current.x * boost; // Tilt left/right
   }, []);
 
   // Optimized resize handler

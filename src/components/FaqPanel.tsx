@@ -52,18 +52,9 @@ const FaqPanel: React.FC<FaqPanelProps> = ({ isHost = false }) => {
 
   return (
     <div className="space-y-3">
-      {!isHost && (
-        <div className="p-3 bg-gradient-to-r from-green-500/10 to-cyan-500/10 border border-white/10 rounded">
-          <div className="text-white font-semibold mb-1">Frequently Asked Questions</div>
-          <div className="text-sm text-gray-300">Here are quick answers to common questions during the hackday.</div>
-        </div>
-      )}
 
       {/* List */}
       <div className="space-y-2">
-        {sortedFaq.length === 0 && (
-          <div className="text-sm text-gray-400">No FAQs yet.</div>
-        )}
         {sortedFaq.map(item => (
           <div key={item.id} className="p-3 bg-black/30 border border-white/10 rounded">
             <div className="flex items-start justify-between gap-3">
