@@ -289,7 +289,7 @@ const HackerProject: React.FC<HackerProjectProps> = ({
   };
 
   return (
-    <div className="quiz-panel h-[70vh] justify-start overflow-hidden bg-black/90">
+    <div className="quiz-panel h-[100vh] max-w-[800px] mx-auto justify-start overflow-hidden bg-black/90">
       {/* Profile Notification removed per request */}
 
       <div className="quiz-header">

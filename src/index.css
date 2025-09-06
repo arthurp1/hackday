@@ -52,14 +52,14 @@ body {
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, -50%) scale(50) translateZ(3000px);
-  transition: all 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: all 2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .quiz-container.state-emerging, .hackathon-container.state-emerging {
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, -50%) scale(0.001) translateZ(-3000px);
-  animation: emergenceFromTunnel 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation: emergenceFromTunnel 3.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
 .quiz-container.state-visible, .hackathon-container.state-visible {

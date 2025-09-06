@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, Trophy, Plus, Edit3, Eye, Gift, User, Target } from 'lucide-react';
+import { Building2, Trophy, Plus, Edit3, Eye, Gift, Target } from 'lucide-react';
 import { useHackathon } from '../contexts/HackathonContext';
 import BountyEditor from './BountyEditor';
 import ChallengeEditor from './ChallengeEditor';
@@ -17,7 +17,7 @@ interface SponsorDashboardProps {
 const SponsorDashboard: React.FC<SponsorDashboardProps> = ({ 
   hostDashboardData = {},
   setHostDashboardData = () => {},
-  onNavigate: _onNavigate, 
+  onNavigate, 
   uiState
 }) => {
   const { state } = useHackathon();
@@ -131,10 +131,13 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleEditItem('challenge', challenge.id)}
-                  className="p-2 text-cyan-400 hover:bg-cyan-500/20 rounded-lg transition-colors"
+                  onClick={() => onNavigate('challengeEditor', { challengeId: challenge.id })}
+                  className="flex items-center gap-2 px-3 py-2 text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 rounded-lg transition-colors"
+                  aria-label="Edit challenge"
+                  title="Edit challenge"
                 >
-                  <Edit3 className="w-4 h-4" />
+                  <Edit3 className="w-5 h-5" />
+                  <span className="text-sm">Edit</span>
                 </button>
               </div>
             </div>
@@ -209,9 +212,12 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleEditItem('bounty', bounty.id)}
-                  className="p-2 text-purple-400 hover:bg-purple-500/20 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 text-purple-300 hover:text-purple-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded-lg transition-colors"
+                  aria-label="Edit bounty"
+                  title="Edit bounty"
                 >
-                  <Edit3 className="w-4 h-4" />
+                  <Edit3 className="w-5 h-5" />
+                  <span className="text-sm">Edit</span>
                 </button>
                 {bounty.githubUrl && (
                   <button
@@ -279,9 +285,12 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleEditItem('goodie', goodie.id)}
-                  className="p-2 text-pink-400 hover:bg-pink-500/20 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 text-pink-300 hover:text-pink-200 bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 rounded-lg transition-colors"
+                  aria-label="Edit goodie"
+                  title="Edit goodie"
                 >
-                  <Edit3 className="w-4 h-4" />
+                  <Edit3 className="w-5 h-5" />
+                  <span className="text-sm">Edit</span>
                 </button>
               </div>
             </div>
@@ -329,7 +338,7 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
         <div className="flex items-center gap-2">
           {activeTab === 'challenges' && (
             <button
-              onClick={() => handleEditItem('challenge', 'new')}
+              onClick={() => onNavigate('challengeEditor', { challengeId: null })}
               className="flex items-center gap-2 px-3 py-2 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 hover:bg-cyan-500/30 transition-colors"
             >
               <Plus className="w-4 h-4" />

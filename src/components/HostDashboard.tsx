@@ -458,7 +458,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
   };
 
   return (
-    <div className="quiz-panel h-[70vh] justify-start overflow-hidden">
+    <div className="quiz-panel h-[90vh] max-w-[800px] mx-auto justify-start overflow-hidden">
       {/* Profile Notification removed per request */}
 
       <div className="quiz-header">

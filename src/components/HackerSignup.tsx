@@ -216,7 +216,7 @@ const HackerSignup: React.FC<HackerSignupProps> = ({ formData: _formData, setFor
         <div className="flex items-center gap-3">
           <Code className="w-8 h-8 text-green-400" />
           <div>
-            <h2 className="text-lg font-bold text-white">Hacker Registration</h2>
+            <h2 className="text-lg font-bold max-w-[300px] text-white">Hacker Registration</h2>
           </div>
         </div>
       </div>

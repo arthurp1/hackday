@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Mail, Lock, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Building2, Lock, ChevronRight } from 'lucide-react';
 import { useHackathon, User } from '../contexts/HackathonContext';
 import { useState } from 'react';
 
@@ -11,10 +11,11 @@ interface SponsorLoginProps {
   onNavigate: (screen: string, data?: any) => void;
 }
 
-const SponsorLogin: React.FC<SponsorLoginProps> = ({ formData, setFormData, onLogin, uiState, onNavigate }) => {
+const SponsorLogin: React.FC<SponsorLoginProps> = ({ formData: _formData, setFormData: _setFormData, onLogin, uiState: _uiState, onNavigate: _onNavigate }) => {
   const { login } = useHackathon();
   const [step, setStep] = useState<'email' | 'password'>('email');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   
   const handleEmailSubmit = () => {
     if (email) {
@@ -23,13 +24,16 @@ const SponsorLogin: React.FC<SponsorLoginProps> = ({ formData, setFormData, onLo
   };
   
   const sponsorAccounts = [
-    { id: 'sponsor-featherless', name: 'Darin (Featherless.ai)', email: 'darin@featherless.ai', company: 'Featherless.ai' },
-    { id: 'sponsor-activepieces', name: 'Kareem (ActivePieces.com)', email: 'kareem@activepieces.com', company: 'ActivePieces.com' },
-    { id: 'sponsor-aibuilders', name: 'Arthur (AIBuilders.com)', email: 'arthur@aibuilders.club', company: 'AIBuilders.club' }
+    { id: 'sponsor-featherless',  name: 'Darin (Featherless.ai)',      email: 'darin@featherless.ai',       company: 'Featherless.ai',  password: 'Aj9SD#jxopIQWF-F' },
+    { id: 'sponsor-activepieces', name: 'Kareem (ActivePieces.com)',   email: 'kareem@activepieces.com',    company: 'ActivePieces.com', password: 'Aj9SD#jxopIQWF-AP' },
+    { id: 'sponsor-aibuilders',   name: 'Arthur (AIBuilders.com)',     email: 'arthur@aibuilders.club',     company: 'AIBuilders.club',  password: 'Aj9SD#jxopIQWF-AB' }
   ];
   
-  const handleLogin = () => {
-    const selectedSponsor = sponsorAccounts.find(s => s.email === email);
+  const handleLogin = (pwOverride?: string) => {
+    const effectivePw = (pwOverride ?? password) || '';
+    const selectedSponsor = sponsorAccounts.find(s => s.email === email && s.password);
+    if (!selectedSponsor) return;
+    if (effectivePw !== selectedSponsor.password) return;
     // Mock sponsor login
     const sponsorUser: User = {
       id: selectedSponsor?.id || `sponsor-${Date.now()}`,
@@ -42,6 +46,23 @@ const SponsorLogin: React.FC<SponsorLoginProps> = ({ formData, setFormData, onLo
     login(sponsorUser);
     onLogin(sponsorUser);
   };
+
+  // Support URL param ?pw=... to prefill and auto-login sponsor
+  React.useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const pw = params.get('pw');
+      if (pw) {
+        setPassword(pw);
+        const match = sponsorAccounts.find(s => s.password === pw);
+        if (match) {
+          setEmail(match.email);
+          setStep('password');
+          setTimeout(() => handleLogin(pw), 0);
+        }
+      }
+    } catch {}
+  }, []);
 
   const renderEmailStep = () => (
     <>
@@ -103,7 +124,9 @@ const SponsorLogin: React.FC<SponsorLoginProps> = ({ formData, setFormData, onLo
           <input
             type="password"
             className="w-full px-4 py-3 bg-black/30 border border-purple-500/30 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:outline-none"
-            placeholder="Enter password (hello1)"
+            placeholder="Enter password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             autoFocus
           />
         </div>
@@ -111,7 +134,7 @@ const SponsorLogin: React.FC<SponsorLoginProps> = ({ formData, setFormData, onLo
 
       <div className="quiz-actions">
         <button 
-          onClick={handleLogin}
+          onClick={() => handleLogin()}
           className="quiz-btn primary"
         >
           <Building2 className="w-5 h-5" />

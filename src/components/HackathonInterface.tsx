@@ -6,6 +6,7 @@ import ProfileEditor from './ProfileEditor';
 import CountdownTimer from './CountdownTimer';
 import { ArrowLeft } from 'lucide-react';
 import WelcomeScreen from './WelcomeScreen';
+import HelloWelcome from './HelloWelcome';
 import HostLogin from './HostLogin';
 import SponsorLogin from './SponsorLogin';
 import HackerSignup from './HackerSignup';
@@ -46,10 +47,14 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
   const [hostDashboardData, setHostDashboardData] = useState<any>({});
   const [speedBoostCount, setSpeedBoostCount] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isClickFrozen, setIsClickFrozen] = useState(false);
   const [portalAnimationsEnabled, setPortalAnimationsEnabled] = useState(() => {
     const saved = localStorage.getItem('portal-animations-enabled');
     return saved !== null ? JSON.parse(saved) : true;
   });
+  // Prevent late intro timers from re-triggering UI state after user interaction
+  const introInitializedRef = React.useRef(false);
+  const introTimersRef = React.useRef<number[]>([]);
   const computeShowWinners = () => !!(state.phase && (state.phase.votingOpen || state.phase.announce));
   const showWinners = computeShowWinners();
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -89,14 +94,14 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
     return () => window.removeEventListener('open-profile-editor', handler as EventListener);
   }, []);
 
-  // Handle click speed boost during transitions
+  // Handle speed boost (clicks, keyboard): always burst; count only during transitions
   const handleSpeedBoost = () => {
     if (isTransitioning) {
       setSpeedBoostCount(prev => prev + 1);
-      // Trigger intense G-force acceleration burst in Three.js
-      onAccelerate(true);
-      setTimeout(() => onAccelerate(false), 200);
     }
+    // Trigger intense G-force acceleration burst in Three.js
+    onAccelerate(true);
+    setTimeout(() => onAccelerate(false), 200);
   };
 
   // Add click listener for speed boost
@@ -118,11 +123,27 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
     };
   }, [isTransitioning]);
 
+  // Add Space key listener for speed boost (always active)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      const isTyping = tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable;
+      if (isTyping) return;
+      if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        handleSpeedBoost();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Initial journey - show tunnel for intro time, then show welcome screen
   useEffect(() => {
     // Check if user is already authenticated
     const savedSession = localStorage.getItem('hackathon-session');
-    if (savedSession) {
+    const forceWelcome = localStorage.getItem('force-welcome') === '1';
+    if (savedSession && !forceWelcome) {
       try {
         const session = JSON.parse(savedSession);
         const sessionAge = Date.now() - new Date(session.timestamp).getTime();
@@ -152,17 +173,38 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
       }
     }
     
-    // No valid session, show normal intro flow
-    const timer = setTimeout(() => {
-      setShowUI(true);
-      setUiState('emerging');
-      
-      setTimeout(() => {
-        setUiState('visible');
-      }, 2000);
-    }, speedSettings.portalIntroTime * 1000);
-    
-    return () => clearTimeout(timer);
+    // No valid session, show special hello welcome, then overview (welcome)
+    const introMs = Math.max(0, Number(speedSettings.portalIntroTime) * 1000 || 0);
+    // Schedule intro only once
+    if (!introInitializedRef.current) {
+      introInitializedRef.current = true;
+      const t1 = window.setTimeout(() => {
+        setShowUI(true);
+        setCurrentScreen('helloWelcome');
+        setUiState('emerging');
+        const t2 = window.setTimeout(() => {
+          setUiState('visible');
+        }, 2000);
+        introTimersRef.current.push(t2);
+
+        // Continue tunnel zoom for a bit, then show overview (welcome) without extra animation
+        const t3 = window.setTimeout(() => {
+          // small acceleration burst for cinematic effect
+          onAccelerate(true);
+          setTimeout(() => onAccelerate(false), 1200);
+          // Navigate to overview after zoom
+          const t4 = window.setTimeout(() => {
+            navigateToScreen('welcome', {}, true);
+          }, 1400);
+          introTimersRef.current.push(t4);
+        }, 2200 + 800); // show hello for ~3s in total before zoom-transition
+        introTimersRef.current.push(t3);
+      }, introMs);
+      introTimersRef.current.push(t1);
+    }
+    return () => {
+      // No-op here; timers are cleared when navigating or unmounting
+    };
   }, [speedSettings.portalIntroTime]);
 
   const navigateToScreen = (screen: string, data?: any, skipAnimation = false) => {
@@ -181,6 +223,9 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
     }
     // Skip animation for edit modes, tabs, and related views
     const noAnimationScreens = [
+      // Pre-login and onboarding
+      'welcome', 'hostLogin', 'sponsorLogin', 'hackerSignup', 'projectSetup',
+      // Editors and dashboards
       'projectEditor', 'attendeeManager', 'bountyEditor',
       'hostDashboard', 'sponsorDashboard', 'enrollReview', 'prizeAnnouncement'
     ];
@@ -192,6 +237,9 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
     if (!portalAnimationsEnabled || skipAnimation || isEditMode || isTabNavigation || 
         (noAnimationScreens.includes(currentScreen) && noAnimationScreens.includes(screen))) {
       // Direct navigation without tunnel animation
+      // Clear any pending intro timers so they don't retrigger welcome/emergence state
+      introTimersRef.current.forEach(id => clearTimeout(id));
+      introTimersRef.current = [];
       setCurrentScreen(screen);
       if (data) {
         if (screen === 'hostDashboard') {
@@ -204,6 +252,9 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
     }
     
     // Full tunnel animation for major screen changes
+    // Clear any pending intro timers so they don't retrigger welcome/emergence state
+    introTimersRef.current.forEach(id => clearTimeout(id));
+    introTimersRef.current = [];
     setIsTransitioning(true);
     setSpeedBoostCount(0);
     setUiState('disappearing');
@@ -232,8 +283,8 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
         setIsTransitioning(false);
         setUiState('emerging');
         
-        // Calculate dynamic emergence time based on speed boosts
-        const baseEmergenceTime = 2000;
+        // Calculate dynamic emergence time based on speed boosts (slower base)
+        const baseEmergenceTime = 3000;
         const emergenceSpeedBoost = speedBoostCount * 100; // 0.1 seconds per click
         const actualEmergenceTime = Math.max(200, baseEmergenceTime - emergenceSpeedBoost);
         
@@ -244,6 +295,23 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
     }, actualAccelTime);
   };
 
+  // Freeze clicks on UI elements while emerging and for 1s after visible
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    // Disable UI interactions during hidden/disappearing/emerging
+    if (uiState === 'hidden' || uiState === 'disappearing' || uiState === 'emerging') {
+      setIsClickFrozen(true);
+    }
+    if (uiState === 'visible') {
+      // Keep frozen for 1 second after becoming visible
+      setIsClickFrozen(true);
+      timeout = setTimeout(() => setIsClickFrozen(false), 1000);
+    }
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [uiState]);
+
   const handleLogin = (user: any) => {
     if (user && user.type === 'host') {
       navigateToScreen('hostDashboard');
@@ -253,8 +321,22 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
   };
 
   const handleLogout = () => {
-    // Navigate back to welcome screen with proper UI state
-    navigateToScreen('welcome', {}, true); // Skip animation for logout
+    // Clear any pending intro timers
+    introTimersRef.current.forEach(id => clearTimeout(id));
+    introTimersRef.current = [];
+    // Reset to Welcome with a fresh emergence animation
+    setIsTransitioning(false);
+    setCurrentScreen('welcome');
+    setShowUI(true);
+    setUiState('emerging');
+    // Freeze clicks immediately during reset
+    setIsClickFrozen(true);
+    const t = window.setTimeout(() => {
+      setUiState('visible');
+      // Unfreeze after 1s of visible
+      window.setTimeout(() => setIsClickFrozen(false), 1000);
+    }, 3800);
+    introTimersRef.current.push(t);
   };
 
   // Get back navigation info
@@ -290,6 +372,8 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
     };
 
     switch (currentScreen) {
+      case 'helloWelcome':
+        return <HelloWelcome uiState={uiState} />;
       case 'welcome':
         return <WelcomeScreen {...screenProps} />;
       case 'hostLogin':
@@ -366,7 +450,7 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
       <div 
         className={`quiz-container state-${uiState}`}
         tabIndex={0}
-        style={{ outline: 'none' }}
+        style={{ outline: 'none', pointerEvents: (isTransitioning || uiState !== 'visible' || isClickFrozen) ? 'none' : 'auto' }}
       >
         {renderScreen()}
       </div>

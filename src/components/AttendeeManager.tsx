@@ -48,6 +48,23 @@ const AttendeeManager: React.FC<AttendeeManagerProps> = ({
     }
   };
 
+  // Update helpers (persist to DB/local via context)
+  const setPrefersSolo = async (attendeeId: string, value: boolean) => {
+    try {
+      await updateAttendee(attendeeId, { wantsSolo: value, teamStatus: value ? 'solo' : undefined });
+    } catch (e) {
+      console.error('Failed to update prefers solo', e);
+    }
+  };
+
+  const setTeamStatus = async (attendeeId: string, status: 'solo' | 'needsTeam' | 'hasTeam') => {
+    try {
+      await updateAttendee(attendeeId, { teamStatus: status, wantsSolo: status === 'solo' ? true : (state.attendees.find(a => a.id === attendeeId)?.wantsSolo || false) });
+    } catch (e) {
+      console.error('Failed to update team status', e);
+    }
+  };
+
   const handleBulkAction = async () => {
     if (!bulkAction || selectedAttendees.length === 0) return;
     
@@ -245,7 +262,7 @@ const AttendeeManager: React.FC<AttendeeManagerProps> = ({
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {!attendee.checkedIn && (
                     <button
                       onClick={() => handleCheckIn(attendee.id)}
@@ -260,6 +277,25 @@ const AttendeeManager: React.FC<AttendeeManagerProps> = ({
                   >
                     <Mail className="w-4 h-4" />
                   </button>
+                  {/* Solo/Team preferences: only editable here in Attendee Manager */}
+                  <label className="flex items-center gap-2 text-xs text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={!!attendee.wantsSolo}
+                      onChange={(e) => setPrefersSolo(attendee.id, e.target.checked)}
+                    />
+                    Prefers Solo
+                  </label>
+                  <select
+                    value={attendee.teamStatus || ''}
+                    onChange={(e) => setTeamStatus(attendee.id, (e.target.value || 'needsTeam') as any)}
+                    className="px-2 py-1 bg-black/30 border border-cyan-500/30 rounded text-xs text-white"
+                  >
+                    <option value="">Status…</option>
+                    <option value="solo">Solo</option>
+                    <option value="needsTeam">Looking for Team</option>
+                    <option value="hasTeam">Has Team</option>
+                  </select>
                 </div>
               </div>
             </div>

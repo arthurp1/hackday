@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { hasNeon, loadStateFromDB, saveStateToDB } from '../lib/neonStore';
+import { hasSupabase, supabase } from '../lib/supabaseClient';
 
 // Types
 export type UserType = 'host' | 'sponsor' | 'hacker';
@@ -201,7 +202,8 @@ const reviveDates = (s: any): any => {
     })),
     challenges: (s.challenges || []).map((c: any) => ({
       ...c,
-      getStartedUrl: c.getStartedUrl || ((c.type === 'featherless') ? 'https://featherless.ai' : (c.type === 'activepieces') ? 'https://activepieces.com' : (c.type === 'aibuilders') ? 'https://aibuilders.club' : undefined)
+      // Respect the stored value; do not overwrite with hardcoded defaults
+      getStartedUrl: c.getStartedUrl || undefined
     })),
     faq: s.faq || [],
     phase: s.phase || { votingOpen: false, announce: false },
@@ -452,6 +454,31 @@ const HackathonContext = createContext<HackathonContextType | undefined>(undefin
 // Provider component
 export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(hackathonReducer, initialState);
+  const [hydrated, setHydrated] = React.useState(false);
+  const fallbackTriedRef = React.useRef(false);
+
+  // Helper: robustly fetch a JSON asset; ensure content-type and valid JSON
+  const fetchJsonAsset = async (urls: string[]): Promise<any | null> => {
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) continue;
+        const ct = res.headers.get('content-type') || '';
+        const text = await res.text();
+        // Vite may return index.html for unknown paths; guard by content-type or leading brace
+        const looksJson = ct.includes('application/json') || (/^\s*[\[{]/.test(text) && !/^\s*<!doctype/i.test(text));
+        if (!looksJson) continue;
+        try {
+          return JSON.parse(text);
+        } catch {
+          continue;
+        }
+      } catch {
+        // try next
+      }
+    }
+    return null;
+  };
 
   // Session management (auth + minimal flags only)
   const saveSession = () => {
@@ -566,11 +593,40 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
     loadSession();
     (async () => {
       try {
+        // Prefer Supabase for bounties/challenges/goodies if configured
+        const syncFromSupabase = async () => {
+          if (!hasSupabase()) return;
+          // Read challenges
+          try {
+            const { data: ch, error: chErr } = await supabase.from('challenges').select('*');
+            if (!chErr && Array.isArray(ch)) {
+              dispatch({ type: 'SET_CHALLENGES', payload: ch as any });
+            }
+          } catch {}
+          // Read bounties
+          try {
+            const { data: bo, error: boErr } = await supabase.from('bounties').select('*');
+            if (!boErr && Array.isArray(bo)) {
+              dispatch({ type: 'SET_BOUNTIES', payload: bo as any });
+            }
+          } catch {}
+          // Read goodies
+          try {
+            const { data: go, error: goErr } = await supabase.from('goodies').select('*');
+            if (!goErr && Array.isArray(go)) {
+              dispatch({ type: 'SET_GOODIES', payload: go as any });
+            }
+          } catch {}
+        };
+        await syncFromSupabase();
         // 1) Try Neon
         if (hasNeon()) {
           const dbState = await loadStateFromDB();
           if (dbState) {
             await importStateJson(JSON.stringify(dbState));
+            setHydrated(true);
+            // After hydration from Neon, prefer Supabase data for sponsor-managed entities if present
+            await syncFromSupabase();
             return;
           }
         }
@@ -582,50 +638,41 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
           if (hasNeon()) {
             try { await saveStateToDB(JSON.parse(persisted)); } catch {}
           }
+          setHydrated(true);
+          // After hydration from local snapshot, prefer Supabase data for sponsor-managed entities if present
+          await syncFromSupabase();
           return;
         }
         // 3) One-time migration from assets/state.json (or assets/backup.json) → import + save to Neon and LS
         const migrated = localStorage.getItem('hackathon-migration-done');
         if (!migrated) {
-          try {
-            const url = new URL('../assets/state.json', import.meta.url).href;
-            const res = await fetch(url);
-            if (res.ok) {
-              const json = await res.text();
-              await importStateJson(json);
-              localStorage.setItem('hackathon-persist', json);
-              if (hasNeon()) {
-                try { await saveStateToDB(JSON.parse(json)); } catch {}
-              }
-              localStorage.setItem('hackathon-migration-done', 'true');
-              return;
+          const stateUrl = new URL('../assets/state.json', import.meta.url).href;
+          const backupUrl = new URL('../assets/backup.json', import.meta.url).href;
+          const asset = await fetchJsonAsset([stateUrl, backupUrl]);
+          if (asset) {
+            const json = JSON.stringify(asset);
+            await importStateJson(json);
+            localStorage.setItem('hackathon-persist', json);
+            if (hasNeon()) {
+              try { await saveStateToDB(asset); } catch {}
             }
-          } catch {}
-          // Fallback to backup.json
-          try {
-            const url2 = new URL('../assets/backup.json', import.meta.url).href;
-            const res2 = await fetch(url2);
-            if (res2.ok) {
-              const json2 = await res2.text();
-              await importStateJson(json2);
-              localStorage.setItem('hackathon-persist', json2);
-              if (hasNeon()) {
-                try { await saveStateToDB(JSON.parse(json2)); } catch {}
-              }
-              localStorage.setItem('hackathon-migration-done', 'true');
-              return;
-            }
-          } catch {}
+            localStorage.setItem('hackathon-migration-done', 'true');
+            setHydrated(true);
+            return;
+          }
         }
       } catch (e) {
         console.warn('Hydration failed:', e);
       }
+      // No sources found or failed — mark as hydrated to allow persistence of current in-memory state
+      setHydrated(true);
     })();
   }, []);
 
   // Save session and persist state on changes (Neon if configured, else localStorage)
   const persistTimer = React.useRef<number | null>(null);
   React.useEffect(() => {
+    if (!hydrated) return; // Avoid overwriting persisted data before hydration completes
     if (state.currentUser) {
       saveSession();
     }
@@ -645,7 +692,40 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
     return () => {
       if (persistTimer.current) window.clearTimeout(persistTimer.current);
     };
-  }, [state.currentUser, state.projects, state.challenges, state.bounties, state.goodies, state.attendees, state.faq, state.phase, state.winners]);
+  }, [hydrated, state.currentUser, state.projects, state.challenges, state.bounties, state.goodies, state.attendees, state.faq, state.phase, state.winners]);
+
+  // Post-hydration safety net: if attendees are empty, attempt a one-time fallback import
+  React.useEffect(() => {
+    (async () => {
+      if (!hydrated) return;
+      if (fallbackTriedRef.current) return;
+      if ((state.attendees || []).length > 0) return;
+      // Try localStorage snapshot if exists and non-empty
+      try {
+        const persisted = localStorage.getItem('hackathon-persist');
+        if (persisted) {
+          const parsed = JSON.parse(persisted);
+          if (Array.isArray(parsed.attendees) && parsed.attendees.length > 0) {
+            await importStateJson(persisted);
+            fallbackTriedRef.current = true;
+            return;
+          }
+        }
+      } catch {}
+      // Try assets/state.json then backup.json using robust JSON detection
+      const stateUrl = new URL('../assets/state.json', import.meta.url).href;
+      const backupUrl = new URL('../assets/backup.json', import.meta.url).href;
+      const asset = await fetchJsonAsset([stateUrl, backupUrl]);
+      if (asset) {
+        const json = JSON.stringify(asset);
+        await importStateJson(json);
+        localStorage.setItem('hackathon-persist', json);
+        fallbackTriedRef.current = true;
+        return;
+      }
+      fallbackTriedRef.current = true;
+    })();
+  }, [hydrated, state.attendees]);
 
   // Ensure auth is stable at app level: if currentUser becomes null but a valid session exists, restore it.
   React.useEffect(() => {
@@ -794,7 +874,12 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
   const updateBounty = async (id: string, updates: Partial<Bounty>): Promise<{ success: boolean }> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      await new Promise(resolve => setTimeout(resolve, 400));
+      if (hasSupabase()) {
+        const { error } = await supabase.from('bounties').update(updates as any).eq('id', id);
+        if (error) throw error;
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
       dispatch({ type: 'UPDATE_BOUNTY', payload: { id, updates } });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true };
@@ -808,11 +893,16 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
   const createBounty = async (bounty: Omit<Bounty, 'id'>): Promise<{ success: boolean; id: string }> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const newBounty: Bounty = {
-        ...bounty,
-        id: `bounty-${Date.now()}`
-      };
+      let newId = `bounty-${Date.now()}`;
+      if (hasSupabase()) {
+        const insert = { ...bounty } as any;
+        const { data, error } = await supabase.from('bounties').insert(insert).select('id').single();
+        if (error) throw error;
+        newId = (data as any)?.id || newId;
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      const newBounty: Bounty = { ...(bounty as any), id: newId } as Bounty;
       dispatch({ type: 'ADD_BOUNTY', payload: newBounty });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true, id: newBounty.id };
@@ -843,11 +933,16 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
   const createChallenge = async (challenge: Omit<Challenge, 'id'>): Promise<{ success: boolean; id: string }> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const newChallenge: Challenge = {
-        ...challenge,
-        id: `challenge-${Date.now()}`
-      };
+      let newId = `challenge-${Date.now()}`;
+      if (hasSupabase()) {
+        const insert = { ...challenge } as any;
+        const { data, error } = await supabase.from('challenges').insert(insert).select('id').single();
+        if (error) throw error;
+        newId = (data as any)?.id || newId;
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      const newChallenge: Challenge = { ...(challenge as any), id: newId } as Challenge;
       dispatch({ type: 'ADD_CHALLENGE', payload: newChallenge });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true, id: newChallenge.id };
@@ -861,7 +956,12 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
   const updateChallenge = async (id: string, updates: Partial<Challenge>): Promise<{ success: boolean }> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      await new Promise(resolve => setTimeout(resolve, 400));
+      if (hasSupabase()) {
+        const { error } = await supabase.from('challenges').update(updates as any).eq('id', id);
+        if (error) throw error;
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
       dispatch({ type: 'UPDATE_CHALLENGE', payload: { id, updates } });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true };
@@ -889,11 +989,16 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
   const createGoodie = async (goodie: Omit<Goodie, 'id'>): Promise<{ success: boolean; id: string }> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const newGoodie: Goodie = {
-        ...goodie,
-        id: `goodie-${Date.now()}`
-      };
+      let newId = `goodie-${Date.now()}`;
+      if (hasSupabase()) {
+        const insert = { ...goodie } as any;
+        const { data, error } = await supabase.from('goodies').insert(insert).select('id').single();
+        if (error) throw error;
+        newId = (data as any)?.id || newId;
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      const newGoodie: Goodie = { ...(goodie as any), id: newId } as Goodie;
       dispatch({ type: 'ADD_GOODIE', payload: newGoodie });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true, id: newGoodie.id };
@@ -907,7 +1012,12 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
   const updateGoodie = async (id: string, updates: Partial<Goodie>): Promise<{ success: boolean }> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      await new Promise(resolve => setTimeout(resolve, 400));
+      if (hasSupabase()) {
+        const { error } = await supabase.from('goodies').update(updates as any).eq('id', id);
+        if (error) throw error;
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
       dispatch({ type: 'UPDATE_GOODIE', payload: { id, updates } });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true };
