@@ -140,7 +140,7 @@ const HackerSignup: React.FC<HackerSignupProps> = ({ formData: _formData, setFor
       </div>
 
       <div className="grid grid-cols-4 gap-3 mb-6 max-h-96 overflow-y-auto">
-        {filteredAccounts.map((account, index) => (
+        {filteredAccounts.sort((a, b) => a.firstName.localeCompare(b.firstName)).map((account, index) => (
           <button
             key={index}
             onClick={() => handleAccountSelect(account)}
@@ -167,7 +167,7 @@ const HackerSignup: React.FC<HackerSignupProps> = ({ formData: _formData, setFor
   
   const renderEmailStep = () => (
     <>
-      <div className="question-container grid gap-1">
+      <div className="question-container flex flex-col gap-1">
         <h3 className="question-text">
           Fill in your Luma email for verification
         </h3>

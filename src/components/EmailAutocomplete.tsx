@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useHackathon } from '../contexts/HackathonContext';
+import { useHackathon, Attendee, User as UserType } from '../contexts/HackathonContext';
 import { Search } from 'lucide-react';
 
 interface EmailAutocompleteProps {
@@ -12,9 +12,17 @@ interface EmailAutocompleteProps {
 
 const normalize = (s: string) => (s || '').toLowerCase();
 
+interface Suggestion {
+  email: string;
+  label: string;
+  short: string;
+  city: string;
+}
+
 const EmailAutocomplete: React.FC<EmailAutocompleteProps> = ({ value, onChange, placeholder, className, autoFocus }) => {
   const { state } = useHackathon();
-  const { attendees } = state;
+  const attendees: Attendee[] = (state.attendees || []) as Attendee[];
+  const currentUser = state.currentUser as UserType | null;
   const [query, setQuery] = useState(value || '');
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -35,15 +43,15 @@ const EmailAutocomplete: React.FC<EmailAutocompleteProps> = ({ value, onChange, 
     }
   }, [autoFocus]);
 
-  const suggestions = useMemo(() => {
+  const suggestions: Suggestion[] = useMemo(() => {
     const q = normalize(query).trim();
-    if (!q) return [] as { email: string; label: string; short: string; city: string }[];
+    if (!q) return [] as Suggestion[];
     const items = attendees
-      .filter(a => {
+      .filter((a: Attendee) => {
         const team = (a.team || '').toLowerCase();
         return !(team.includes('sponsors') || team === 'host' || team === 'hosts');
       })
-      .map(a => {
+      .map((a: Attendee): Suggestion => {
         const first = (a.firstName || a.name || '').trim();
         const last = (a.lastName || '').trim();
         const label = `${first} ${last}`.trim() || a.email;
@@ -55,7 +63,7 @@ const EmailAutocomplete: React.FC<EmailAutocompleteProps> = ({ value, onChange, 
           city: a.profile?.city || ''
         };
       })
-      .filter(item => {
+      .filter((item: Suggestion) => {
         const nq = q.toLowerCase();
         return (
           item.short.toLowerCase().startsWith(nq) ||
@@ -122,7 +130,7 @@ const EmailAutocomplete: React.FC<EmailAutocompleteProps> = ({ value, onChange, 
 
       {open && suggestions.length > 0 && (
         <div className="absolute z-20 mt-1 w-full bg-black/90 border border-white/10 rounded-lg max-h-56 overflow-auto shadow-xl">
-          {suggestions.map((s, idx) => (
+          {suggestions.map((s: Suggestion, idx: number) => (
             <button
               key={`${s.email}-${idx}`}
               onMouseDown={(e) => { e.preventDefault(); commit(s.email, s.label); }}
@@ -132,7 +140,11 @@ const EmailAutocomplete: React.FC<EmailAutocompleteProps> = ({ value, onChange, 
             >
               <div className="flex items-center justify-between">
                 <span className="font-medium text-green-400">{s.label}</span>
-                <span className="text-xs text-gray-400 ml-2">{s.email}</span>
+                {currentUser?.type === 'hacker' ? (
+                  s.city ? <span className="text-xs text-gray-400 ml-2">{s.city}</span> : <span className="text-xs text-gray-500 ml-2">&nbsp;</span>
+                ) : (
+                  <span className="text-xs text-gray-400 ml-2">{s.email}</span>
+                )}
               </div>
             </button>
           ))}

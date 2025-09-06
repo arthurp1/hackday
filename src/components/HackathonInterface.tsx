@@ -122,7 +122,11 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
           setUiState('visible');
           
           if (session.currentUser.type === 'hacker') {
-            if (!session.currentUser.onboardingCompleted) {
+            const email = session.currentUser.email;
+            const hasProject = (state.projects || []).some(p => (p.teamMembers || []).includes(email));
+            if (hasProject) {
+              setCurrentScreen('hackerProject');
+            } else if (!session.currentUser.onboardingCompleted) {
               setCurrentScreen('projectQuestions');
             } else {
               setCurrentScreen('hackerProject');

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Users, Rocket, Building2, Trophy, Zap, Workflow, Brain, User, Gift, Ticket, Package } from 'lucide-react';
+import { Save, Users, Rocket, Building2, Trophy, Zap, Workflow, Brain, Gift, Ticket, Package } from 'lucide-react';
 import { useHackathon, Project, ProjectType, ChallengeType } from '../contexts/HackathonContext';
 import TagInput from './TagInput';
-import EmailAutocomplete from './EmailAutocomplete';
+import NameAutocomplete from './NameAutocomplete';
 import ProjectBrowser from './ProjectBrowser';
 import FaqPanel from './FaqPanel';
 import ProfileEditor from './ProfileEditor';
@@ -21,7 +21,7 @@ const HackerProject: React.FC<HackerProjectProps> = ({
   formData,
   setFormData: _setFormData
 }) => {
-  const { state, updateProject, createProject, claimBounty, importStateJson } = useHackathon();
+  const { state, updateProject, createProject, claimBounty } = useHackathon();
   const { projects, challenges, bounties, goodies, currentUser } = state;
   
   // Initialize project from questionnaire data or existing project
@@ -56,6 +56,7 @@ const HackerProject: React.FC<HackerProjectProps> = ({
     } catch { return false; }
   });
   const [enrollError, setEnrollError] = useState<string>('');
+  const [showTeamWarning, setShowTeamWarning] = useState<{ visible: boolean; message: string }>(() => ({ visible: false, message: '' }));
 
   // Load existing project if user has one
   useEffect(() => {
@@ -88,6 +89,50 @@ const HackerProject: React.FC<HackerProjectProps> = ({
     }
   }, [projects, currentUser, formData]);
 
+  // Helpers to resolve display labels (never show emails)
+  const emailToLabel = (email: string): string => {
+    const a = state.attendees.find(att => att.email === email);
+    const first = a?.firstName || a?.name || '';
+    const last = a?.lastName || '';
+    return `${first}${last ? ' ' + last.charAt(0).toUpperCase() + '.' : ''}`.trim() || 'Hacker';
+  };
+
+  // Guard: prevent adding hackers who already have a team/project
+  const canAddEmail = (email: string): { ok: boolean; reason?: string } => {
+    const attendee = state.attendees.find(a => a.email === email);
+    if (!attendee) return { ok: true };
+    const alreadyAssigned = !!attendee.projectId || state.projects.some(p => (p.teamMembers || []).includes(email));
+    if (alreadyAssigned) return { ok: false, reason: 'Hacker already has a team, ask to remove oneself' };
+    return { ok: true };
+  };
+
+  const addMemberByEmail = (email: string) => {
+    const check = canAddEmail(email);
+    if (!check.ok) {
+      setShowTeamWarning({ visible: true, message: check.reason || 'Cannot add this hacker.' });
+      return;
+    }
+    setProject(prev => ({
+      ...(prev as Project),
+      teamMembers: [
+        ...((prev.teamMembers || []).filter(e => e && e.trim())),
+        email
+      ]
+    }));
+  };
+
+  const removeSelfFromTeam = async () => {
+    const me = currentUser?.email || '';
+    const others = (project.teamMembers || []).filter(e => e && e.trim() && e !== me);
+    if (others.length === 0) return; // require at least one other member
+    const next = { ...project, teamMembers: others } as Partial<Project>;
+    setProject(next);
+    // Persist if existing project
+    if (project.id) {
+      await updateProject(project.id, { teamMembers: others });
+    }
+  };
+
   // Listen for global requests to open the profile editor
   useEffect(() => {
     const handler = () => setActiveTab('profile');
@@ -95,24 +140,7 @@ const HackerProject: React.FC<HackerProjectProps> = ({
     return () => window.removeEventListener('open-profile-editor', handler as EventListener);
   }, []);
 
-  // Reload global state on tab switches (no autosave)
-  const reloadGlobalState = async () => {
-    try {
-      const res = await fetch('/src/contexts/state.json');
-      if (res.ok) {
-        const json = await res.text();
-        await importStateJson(json);
-      }
-    } catch (e) {
-      console.warn('Failed to reload state.json', e);
-    }
-  };
-
   const handleTabChange = async (key: typeof activeTab) => {
-    // Skip reload on read-only tabs to avoid unnecessary fetches
-    if (key !== 'browse' && key !== 'faq') {
-      await reloadGlobalState();
-    }
     setActiveTab(key);
   };
 
@@ -135,8 +163,14 @@ const HackerProject: React.FC<HackerProjectProps> = ({
 
       if (isEditing && project.id) {
         await updateProject(project.id, projectData);
+        // Keep local copy in sync
+        setProject(prev => ({ ...prev, ...projectData }));
       } else {
-        await createProject(projectData as Omit<Project, 'id'>);
+        const res = await createProject(projectData as Omit<Project, 'id'>);
+        if (res.success) {
+          setProject({ ...(projectData as Project), id: res.id });
+          setIsEditing(true);
+        }
       }
       // Update last saved snapshot
       const snapshot = JSON.stringify({
@@ -180,20 +214,6 @@ const HackerProject: React.FC<HackerProjectProps> = ({
 
   const handleTagsChange = (tags: string[]) => {
     setProject(prev => ({ ...prev, tags }));
-  };
-
-  const addTeamMember = () => {
-    setProject(prev => ({
-      ...prev,
-      teamMembers: [...(prev.teamMembers || []), '']
-    }));
-  };
-
-  const updateTeamMember = (index: number, email: string) => {
-    setProject(prev => ({
-      ...prev,
-      teamMembers: prev.teamMembers?.map((member, i) => i === index ? email : member) || []
-    }));
   };
 
   const removeTeamMember = (index: number) => {
@@ -263,33 +283,7 @@ const HackerProject: React.FC<HackerProjectProps> = ({
 
   return (
     <div className="quiz-panel h-[70vh] justify-start overflow-hidden bg-black/90">
-      {/* Profile Notification (clickable, dismissible) */}
-      {currentUser && (!currentUser.profile?.city || !currentUser.profile?.linkedin) && (() => {
-        const dismissedKey = `profile-banner-dismissed-${currentUser.email}`;
-        const isDismissed = typeof window !== 'undefined' && localStorage.getItem(dismissedKey) === 'true';
-        if (isDismissed) return null;
-        return (
-          <div 
-            className="fixed top-4 right-4 z-20 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg backdrop-blur-md cursor-pointer group"
-            onClick={() => setActiveTab('profile')}
-            role="button"
-            aria-label="Complete your profile"
-          >
-            <div className="flex items-center gap-2 text-yellow-400 text-sm">
-              <User className="w-4 h-4" />
-              <span className="group-hover:text-yellow-200">Complete your profile</span>
-              <button
-                onClick={(e) => { e.stopPropagation(); localStorage.setItem(dismissedKey, 'true'); (document.activeElement as HTMLElement)?.blur(); }}
-                className="ml-2 text-yellow-300 hover:text-yellow-100"
-                aria-label="Dismiss"
-                title="Dismiss"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Profile Notification removed per request */}
 
       <div className="quiz-header">
         <div className="flex items-center gap-3">
@@ -606,42 +600,70 @@ const HackerProject: React.FC<HackerProjectProps> = ({
 
         {activeTab === 'team' && (
           <div className="space-y-4">
+            {/* Info */}
             {project.teamMembers && project.teamMembers.filter(e => e && e.trim()).length <= 1 && (
               <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-sm text-blue-300">
-                You’re currently the only team member. You can add teammates by entering their email below, or join another project by asking that project’s creator to add your email to their team.
+                You’re currently the only team member. Add teammates by selecting their name below, or join another project by asking that project’s creator to add you.
               </div>
             )}
-            {/* Team Members */}
+
+            {/* Current Team Members as tags (no emails) */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">Team Members</label>
-              <div className="space-y-2">
-                {project.teamMembers?.map((member, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <EmailAutocomplete
-                      value={member}
-                      onChange={(email) => updateTeamMember(index, email)}
-                      placeholder="team.member@example.com"
-                      autoFocus={!member}
-                      className="flex-1"
-                    />
+              <div className="flex flex-wrap gap-2">
+                {(project.teamMembers || []).filter(e => e && e.trim()).map((email, idx) => (
+                  <span key={`${email}-${idx}`} className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/30 text-green-300 text-xs">
+                    {emailToLabel(email)}
                     {project.teamMembers && project.teamMembers.length > 1 && (
                       <button
-                        onClick={() => removeTeamMember(index)}
-                        className="px-2 py-2 text-red-400 hover:bg-red-500/20 rounded text-sm"
+                        onClick={() => removeTeamMember(idx)}
+                        className="text-red-300 hover:text-red-200"
+                        aria-label="Remove member"
+                        title="Remove"
                       >
                         ×
                       </button>
                     )}
-                  </div>
+                  </span>
                 ))}
-                <button
-                  onClick={addTeamMember}
-                  className="px-3 py-1 text-green-400 hover:bg-green-500/20 rounded text-sm"
-                >
-                  + Add Member
-                </button>
               </div>
             </div>
+
+            {/* Add Member by Name (no email visible) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Add teammate</label>
+              <NameAutocomplete
+                value=""
+                onSelect={(email) => addMemberByEmail(email)}
+                placeholder="Type a first name (e.g., Ranga B.)"
+                className="w-full"
+              />
+            </div>
+
+            {/* Leave Team (if there is another member) */}
+            {project.teamMembers && project.teamMembers.includes(currentUser?.email || '') && project.teamMembers.filter(e => e && e.trim()).length > 1 && (
+              <div>
+                <button
+                  onClick={removeSelfFromTeam}
+                  className="px-3 py-1 text-yellow-300 hover:bg-yellow-500/20 rounded text-sm"
+                >
+                  Leave team
+                </button>
+              </div>
+            )}
+
+            {/* Warning Modal */}
+            {showTeamWarning.visible && (
+              <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/60">
+                <div className="bg-black/90 border border-white/10 rounded-lg p-4 max-w-sm w-full text-sm text-gray-200">
+                  <div className="font-semibold text-yellow-300 mb-2">Cannot add teammate</div>
+                  <div className="mb-3">{showTeamWarning.message}</div>
+                  <div className="flex justify-end">
+                    <button onClick={() => setShowTeamWarning({ visible: false, message: '' })} className="px-3 py-1 bg-white/10 rounded hover:bg-white/20">OK</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

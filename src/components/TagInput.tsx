@@ -32,7 +32,7 @@ const TagInput: React.FC<TagInputProps> = ({
     'Gaming', 'AR/VR', 'Productivity', 'Communication', 'Analytics'
   ];
 
-  const allSuggestions = [...suggestions, ...defaultSuggestions];
+  const allSuggestions = React.useMemo(() => [...suggestions, ...defaultSuggestions], [suggestions]);
 
   useEffect(() => {
     if (inputValue.trim()) {

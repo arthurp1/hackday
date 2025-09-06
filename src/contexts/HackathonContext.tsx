@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-// Seeded state file (JSON)
-import seededState from './state.json';
+import { hasNeon, loadStateFromDB, saveStateToDB } from '../lib/neonStore';
 
 // Types
 export type UserType = 'host' | 'sponsor' | 'hacker';
@@ -204,8 +203,20 @@ const reviveDates = (s: any): any => {
   } as HackathonState;
 };
 
-// Initial state from JSON seed (revived)
-const initialState: HackathonState = reviveDates(seededState as any);
+// Initial empty state; hydrated from Neon/localStorage (or one-time seed migration)
+const initialState: HackathonState = {
+  currentUser: null,
+  projects: [],
+  challenges: [],
+  bounties: [],
+  goodies: [],
+  attendees: [],
+  faq: [],
+  phase: { votingOpen: false, announce: false },
+  winners: { challenge: {}, bounty: {} },
+  loading: false,
+  error: null,
+};
 
 // Reducer
 const hackathonReducer = (state: HackathonState, action: HackathonAction): HackathonState => {
@@ -532,17 +543,77 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   };
 
-  // Load session on mount
+  // Load session on mount and hydrate from Neon or localStorage.
+  // If none found, one-time migrate from assets/state.json, then persist to Neon and memoize migration flag.
   React.useEffect(() => {
     loadSession();
+    (async () => {
+      try {
+        // 1) Try Neon
+        if (hasNeon()) {
+          const dbState = await loadStateFromDB();
+          if (dbState) {
+            await importStateJson(JSON.stringify(dbState));
+            return;
+          }
+        }
+        // 2) Try localStorage snapshot
+        const persisted = localStorage.getItem('hackathon-persist');
+        if (persisted) {
+          await importStateJson(persisted);
+          // Also persist to Neon if configured and empty
+          if (hasNeon()) {
+            try { await saveStateToDB(JSON.parse(persisted)); } catch {}
+          }
+          return;
+        }
+        // 3) One-time migration from assets/state.json (if available) → import + save to Neon and LS
+        const migrated = localStorage.getItem('hackathon-migration-done');
+        if (!migrated) {
+          try {
+            const url = new URL('../assets/state.json', import.meta.url).href;
+            const res = await fetch(url);
+            if (res.ok) {
+              const json = await res.text();
+              await importStateJson(json);
+              localStorage.setItem('hackathon-persist', json);
+              if (hasNeon()) {
+                try { await saveStateToDB(JSON.parse(json)); } catch {}
+              }
+              localStorage.setItem('hackathon-migration-done', 'true');
+              return;
+            }
+          } catch {}
+        }
+      } catch (e) {
+        console.warn('Hydration failed:', e);
+      }
+    })();
   }, []);
 
-  // Save session when state changes
+  // Save session and persist state on changes (Neon if configured, else localStorage)
+  const persistTimer = React.useRef<number | null>(null);
   React.useEffect(() => {
     if (state.currentUser) {
       saveSession();
     }
-  }, [state.currentUser]);
+    const persist = async () => {
+      try {
+        const json = exportStateJson();
+        if (hasNeon()) {
+          await saveStateToDB(JSON.parse(json));
+        } else {
+          localStorage.setItem('hackathon-persist', json);
+        }
+      } catch {}
+    };
+    if (persistTimer.current) window.clearTimeout(persistTimer.current);
+    // Debounce writes to avoid excessive calls
+    persistTimer.current = window.setTimeout(() => { persist(); }, 500) as unknown as number;
+    return () => {
+      if (persistTimer.current) window.clearTimeout(persistTimer.current);
+    };
+  }, [state.currentUser, state.projects, state.challenges, state.bounties, state.goodies, state.attendees, state.faq, state.phase, state.winners]);
 
   // Mock API functions
   const login = async (user: User): Promise<void> => {
@@ -572,7 +643,24 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 500));
+      // Compute the next project data to sync attendees
+      const existing = state.projects.find(p => p.id === id);
+      const nextProject: Project | null = existing ? ({ ...existing, ...updates } as Project) : null;
       dispatch({ type: 'UPDATE_PROJECT', payload: { id, updates } });
+      // Sync attendees' project assignments
+      if (nextProject) {
+        const teamEmails = new Set((nextProject.teamMembers || []).map(e => e.toLowerCase()));
+        // Assign projectId to attendees on the team
+        state.attendees.forEach(att => {
+          const isOnTeam = teamEmails.has(att.email.toLowerCase());
+          const wasOnThis = att.projectId === nextProject.id;
+          if (isOnTeam && !wasOnThis) {
+            dispatch({ type: 'UPDATE_ATTENDEE', payload: { id: att.id, updates: { projectId: nextProject.id, team: nextProject.teamName || nextProject.name, teamStatus: 'hasTeam' } } });
+          } else if (!isOnTeam && wasOnThis) {
+            dispatch({ type: 'UPDATE_ATTENDEE', payload: { id: att.id, updates: { projectId: undefined, team: undefined, teamStatus: att.teamStatus === 'hasTeam' ? 'solo' : att.teamStatus } } });
+          }
+        });
+      }
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true };
     } catch (error) {
@@ -591,6 +679,13 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
         id: `proj-${Date.now()}`
       };
       dispatch({ type: 'ADD_PROJECT', payload: newProject });
+      // Sync attendees' project assignments based on teamMembers
+      const teamEmails = new Set((newProject.teamMembers || []).map(e => e.toLowerCase()));
+      state.attendees.forEach(att => {
+        if (teamEmails.has(att.email.toLowerCase())) {
+          dispatch({ type: 'UPDATE_ATTENDEE', payload: { id: att.id, updates: { projectId: newProject.id, team: newProject.teamName || newProject.name, teamStatus: 'hasTeam' } } });
+        }
+      });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true, id: newProject.id };
     } catch (error) {

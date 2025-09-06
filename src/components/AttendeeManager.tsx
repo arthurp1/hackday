@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Search, CheckCircle, AlertCircle, Mail, Users, Filter } from 'lucide-react';
-import { useHackathon } from '../contexts/HackathonContext';
+import { ArrowLeft, Search, CheckCircle, AlertCircle, Mail } from 'lucide-react';
+import { useHackathon, Attendee, Project } from '../contexts/HackathonContext';
 
 interface AttendeeManagerProps {
   onNavigate: (screen: string, data?: any) => void;
@@ -11,21 +11,22 @@ interface AttendeeManagerProps {
 
 const AttendeeManager: React.FC<AttendeeManagerProps> = ({ 
   onNavigate, 
-  uiState,
+  uiState: _uiState,
   isInline = false,
   onCancel
 }) => {
   const { state, updateAttendee, checkInAttendee } = useHackathon();
-  const { attendees } = state;
-  const isHacker = (a: any) => a && typeof a.id === 'string' && a.id.startsWith('att-') && !((a.team || '').toLowerCase().includes('sponsors') || (a.team || '').toLowerCase() === 'host' || (a.team || '').toLowerCase() === 'hosts');
-  const hackerAttendees = attendees.filter(isHacker);
+  const attendees: Attendee[] = state.attendees as Attendee[];
+  const projects: Project[] = state.projects as Project[];
+  const isHacker = (a: Attendee) => a && typeof a.id === 'string' && a.id.startsWith('att-') && !((a.team || '').toLowerCase().includes('sponsors') || (a.team || '').toLowerCase() === 'host' || (a.team || '').toLowerCase() === 'hosts');
+  const hackerAttendees: Attendee[] = attendees.filter(isHacker);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'checkedIn' | 'notCheckedIn'>('all');
   const [bulkAction, setBulkAction] = useState<'checkIn' | 'sendEmail' | ''>('');
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [processing, setProcessing] = useState(false);
 
-  const filteredAttendees = hackerAttendees.filter(attendee => {
+  const filteredAttendees: Attendee[] = hackerAttendees.filter((attendee: Attendee) => {
     const matchesSearch = attendee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          attendee.email.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -38,7 +39,7 @@ const AttendeeManager: React.FC<AttendeeManagerProps> = ({
 
   const handleCheckIn = async (attendeeId: string) => {
     try {
-      const attendee = attendees.find(a => a.id === attendeeId);
+      const attendee = attendees.find((a: Attendee) => a.id === attendeeId);
       if (attendee) {
         await checkInAttendee(attendee.email);
       }
@@ -82,7 +83,7 @@ const AttendeeManager: React.FC<AttendeeManagerProps> = ({
     setSelectedAttendees(
       selectedAttendees.length === filteredAttendees.length 
         ? [] 
-        : filteredAttendees.map(a => a.id)
+        : filteredAttendees.map((a: Attendee) => a.id)
     );
   };
 
@@ -203,7 +204,7 @@ const AttendeeManager: React.FC<AttendeeManagerProps> = ({
             <span className="text-sm text-gray-400">Select All ({filteredAttendees.length})</span>
           </div>
           
-          {filteredAttendees.map(attendee => (
+          {filteredAttendees.map((attendee: Attendee) => (
             <div key={attendee.id} className="p-3 bg-black/20 rounded-lg border border-white/10">
               <div className="flex items-center gap-3">
                 <input
@@ -223,15 +224,20 @@ const AttendeeManager: React.FC<AttendeeManagerProps> = ({
                     )}
                   </div>
                   
-                  <div className="text-sm text-gray-400 mb-2">
-                    {attendee.email}
+                  <div className="text-sm text-gray-400 mb-2 flex flex-wrap items-center gap-2">
+                    <span>{attendee.email}</span>
                     {attendee.team && (
-                      <span className="ml-4 text-purple-400">Team: {attendee.team}</span>
+                      <span className="ml-2 text-purple-400">Team: {attendee.team}</span>
+                    )}
+                    {attendee.projectId && (
+                      <span className="px-2 py-0.5 bg-green-500/10 border border-green-500/30 rounded text-green-300 text-xs">
+                        Project: {(projects || []).find((p: any) => p.id === attendee.projectId)?.name || attendee.projectId}
+                      </span>
                     )}
                   </div>
                   
                   <div className="flex flex-wrap gap-1">
-                    {attendee.skills.map(skill => (
+                    {attendee.skills.map((skill: string) => (
                       <span key={skill} className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">
                         {skill}
                       </span>
