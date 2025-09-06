@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useHackathon } from '../contexts/HackathonContext';
 import { HackathonProvider } from '../contexts/HackathonContext';
 import SettingsMenu from './SettingsMenu';
 import CountdownTimer from './CountdownTimer';
@@ -37,6 +38,7 @@ interface HackathonInterfaceProps {
 }
 
 const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccelerate, speedSettings }) => {
+  const { state } = useHackathon();
   const [currentScreen, setCurrentScreen] = useState('welcome');
   const [uiState, setUiState] = useState<'hidden' | 'emerging' | 'visible' | 'disappearing'>('hidden');
   const [showUI, setShowUI] = useState(false);
@@ -48,10 +50,25 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
     const saved = localStorage.getItem('portal-animations-enabled');
     return saved !== null ? JSON.parse(saved) : true;
   });
+  const computeShowWinners = () => !!(state.phase && (state.phase.votingOpen || state.phase.announce));
+  const showWinners = computeShowWinners();
+  const winnersPickedAll = () => {
+    const ch = state.challenges || [];
+    if (ch.length === 0) return false;
+    const map = (state.winners?.challenge || {}) as Record<string, string>;
+    return ch.every((c: any) => !!map[c.type]);
+  };
   // Save portal animations preference
   useEffect(() => {
     localStorage.setItem('portal-animations-enabled', JSON.stringify(portalAnimationsEnabled));
   }, [portalAnimationsEnabled]);
+
+  // Listen to admin phase toggles (still dispatch a phase-updated event to sync any UI not reading context)
+  useEffect(() => {
+    const onPhaseUpdated = () => {};
+    window.addEventListener('phase-updated', onPhaseUpdated as any);
+    return () => window.removeEventListener('phase-updated', onPhaseUpdated as any);
+  }, []);
 
   // Handle click speed boost during transitions
   const handleSpeedBoost = () => {
@@ -289,7 +306,17 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
         onLogout={handleLogout}
       />
       
-      <CountdownTimer />
+      {!((state.phase?.announce) && winnersPickedAll()) && (
+        <CountdownTimer />
+      )}
+      {showWinners && (
+        <button
+          onClick={() => navigateToScreen('prizeAnnouncement', {}, true)}
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2 bg-green-500/20 border border-green-500/40 text-green-300 rounded-lg backdrop-blur-md hover:bg-green-500/30 transition-colors"
+        >
+          View Winners
+        </button>
+      )}
       
       {/* Back Button: bottom-left, onboarding only */}
       {showBackButton && (

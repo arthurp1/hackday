@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Save, User, MapPin, Linkedin, Twitter, Briefcase, FileText } from 'lucide-react';
 import { useHackathon } from '../contexts/HackathonContext';
 import TagInput from './TagInput';
@@ -26,6 +26,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ onClose, isInline = false
     twitter: '',
     otherProjects: [] as string[],
     bio: '',
+    skills: [] as string[],
     ...currentUser?.profile
   });
   
@@ -56,8 +57,10 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ onClose, isInline = false
 
   if (!currentUser) return null;
 
-  return (
-    <div className={isInline ? "space-y-4" : "p-6 bg-black/40 backdrop-blur-xl border border-cyan-500/30 rounded-lg"}>
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const panelContent = (
+    <div ref={panelRef} className={isInline ? "space-y-4" : "relative w-full max-w-2xl p-6 bg-black border border-cyan-500/30 rounded-lg shadow-xl opacity-100"}>
       {!isInline && (
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -168,6 +171,18 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ onClose, isInline = false
             suggestions={['E-commerce Platform', 'Mobile App', 'SaaS Tool', 'Open Source Library', 'AI Chatbot', 'Data Dashboard']}
           />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Skills
+          </label>
+          <TagInput
+            tags={profile.skills || []}
+            onChange={(skills) => setProfile(prev => ({ ...prev, skills }))}
+            placeholder="Add skills (e.g. React, Python, LLM, UX)"
+            suggestions={['React','TypeScript','Node.js','Python','LLM','UI/UX','DevOps','SQL','NoSQL','Vision','NLP']}
+          />
+        </div>
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
@@ -187,6 +202,24 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ onClose, isInline = false
           <Save className="w-4 h-4" />
           {saving ? 'Saving...' : 'Save Profile'}
         </button>
+      </div>
+    </div>
+  );
+
+  if (isInline) return panelContent;
+
+  // Modal wrapper: top-most overlay with backdrop
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/60"
+        onClick={() => {
+          if (onClose) onClose();
+        }}
+        aria-hidden="true"
+      />
+      <div className="relative z-10 mt-8" onClick={(e) => e.stopPropagation()}>
+        {panelContent}
       </div>
     </div>
   );

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, Crown, Medal, Clock, ExternalLink, Github, Video, ArrowLeft } from 'lucide-react';
-import { useHackathon } from '../contexts/HackathonContext';
+import { useHackathon, ChallengeType } from '../contexts/HackathonContext';
+import Enrollment from './Enrollment';
 
 interface PrizeAnnouncementProps {
   onNavigate: (screen: string, data?: any) => void;
   uiState: string;
 }
 
-const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiState }) => {
+const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiState: _uiState }) => {
   const { state } = useHackathon();
-  const { projects, challenges, bounties, attendees } = state;
+  const { projects, challenges, bounties, attendees, winners, phase } = state as any;
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Update time every minute
@@ -25,48 +26,44 @@ const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiSta
   announcementTime.setHours(18, 30, 0, 0);
   const showWinners = currentTime >= announcementTime;
 
+  const winnersPickedAll = () => {
+    const ch = (challenges || []) as Array<{ type: ChallengeType }>;
+    if (ch.length === 0) return false;
+    const map = (winners?.challenge || {}) as Partial<Record<ChallengeType, string>>;
+    return ch.every((c) => !!map[c.type as ChallengeType]);
+  };
+  const phaseAnnounced = !!(phase && phase.announce);
+
   const getProjectTeamMembers = (project: any) => {
-    return attendees.filter(attendee => 
+    return (attendees as any[]).filter((attendee: any) => 
       project.teamMembers.includes(attendee.email)
     );
   };
 
-  const getWinners = () => {
-    const challengeWinners: any[] = [];
-    const bountyWinners: any[] = [];
-
-    projects.forEach(project => {
-      if (project.judging) {
-        // Check challenge winners
-        challenges.forEach(challenge => {
-          const judgmentKey = `challenge_${challenge.type}`;
-          if (project.judging[judgmentKey] === 'winner') {
-            challengeWinners.push({
-              project,
-              challenge,
-              teamMembers: getProjectTeamMembers(project)
-            });
-          }
-        });
-
-        // Check bounty winners
-        if (project.judging.bounty_status === 'pass') {
-          const bounty = bounties.find(b => b.id === project.bountyId);
-          if (bounty) {
-            bountyWinners.push({
-              project,
-              bounty,
-              teamMembers: getProjectTeamMembers(project)
-            });
-          }
-        }
+  const challengeWinners = (() => {
+    const list: any[] = [];
+    const chMap = winners?.challenge || {};
+    (challenges as any[]).forEach((ch: any) => {
+      const pid = chMap[ch.type as ChallengeType];
+      if (pid) {
+        const project = (projects as any[]).find((p: any) => p.id === pid);
+        if (project) list.push({ project, challenge: ch, teamMembers: getProjectTeamMembers(project) });
       }
     });
+    return list;
+  })();
 
-    return { challengeWinners, bountyWinners };
-  };
-
-  const { challengeWinners, bountyWinners } = getWinners();
+  const bountyWinners = (() => {
+    const list: any[] = [];
+    const bMap = winners?.bounty || {};
+    Object.keys(bMap as Record<string, string>).forEach((bid: string) => {
+      const pid = (bMap as Record<string, string>)[bid];
+      const project = (projects as any[]).find((p: any) => p.id === pid);
+      const bounty = (bounties as any[]).find((b: any) => b.id === bid);
+      if (project && bounty) list.push({ project, bounty, teamMembers: getProjectTeamMembers(project) });
+    });
+    return list;
+  })();
 
   const renderCountdown = () => {
     const timeUntilAnnouncement = announcementTime.getTime() - currentTime.getTime();
@@ -102,7 +99,7 @@ const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiSta
             Challenge Winners
           </h3>
           <div className="space-y-4">
-            {challengeWinners.map(({ project, challenge, teamMembers }, index) => (
+            {challengeWinners.map(({ project, challenge, teamMembers }: any) => (
               <div key={`${project.id}-${challenge.id}`} className="p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-lg border-2 border-yellow-500/30">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -115,7 +112,7 @@ const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiSta
                     </div>
                     <p className="text-gray-300 mb-3">{project.description}</p>
                     <div className="text-green-400 font-medium mb-3">
-                      Prize: {challenge.prizes.map(p => p.details).join(' + ')}
+                      Prize: {challenge.prizes.map((p: any) => p.details).join(' + ')}
                     </div>
                   </div>
                 </div>
@@ -124,7 +121,7 @@ const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiSta
                 <div className="mb-3">
                   <h5 className="text-sm font-medium text-gray-400 mb-2">Team Members:</h5>
                   <div className="flex flex-wrap gap-2">
-                    {teamMembers.map(member => (
+                    {teamMembers.map((member: any) => (
                       <div key={member.id} className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 rounded-full">
                         {member.avatar && (
                           <img 
@@ -180,7 +177,7 @@ const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiSta
             Bounty Completions
           </h3>
           <div className="space-y-4">
-            {bountyWinners.map(({ project, bounty, teamMembers }, index) => (
+            {bountyWinners.map(({ project, bounty, teamMembers }: any) => (
               <div key={`${project.id}-${bounty.id}`} className="p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border-2 border-blue-500/30">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -193,7 +190,7 @@ const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiSta
                     </div>
                     <p className="text-gray-300 mb-3">{project.description}</p>
                     <div className="text-green-400 font-medium mb-3">
-                      Prize: {bounty.prizes.map(p => p.details).join(' + ')}
+                      Prize: {bounty.prizes.map((p: any) => p.details).join(' + ')}
                     </div>
                   </div>
                 </div>
@@ -202,7 +199,7 @@ const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiSta
                 <div className="mb-3">
                   <h5 className="text-sm font-medium text-gray-400 mb-2">Team Members:</h5>
                   <div className="flex flex-wrap gap-2">
-                    {teamMembers.map(member => (
+                    {teamMembers.map((member: any) => (
                       <div key={member.id} className="flex items-center gap-2 px-3 py-1 bg-purple-500/20 rounded-full">
                         {member.avatar && (
                           <img 
@@ -258,6 +255,8 @@ const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiSta
     </div>
   );
 
+  const winnersOnly = phaseAnnounced && winnersPickedAll();
+
   return (
     <div className="quiz-panel">
       <button
@@ -277,7 +276,13 @@ const PrizeAnnouncement: React.FC<PrizeAnnouncementProps> = ({ onNavigate, uiSta
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {showWinners ? renderWinners() : renderCountdown()}
+        {winnersOnly ? (
+          <div className="p-4">
+            <Enrollment mode="host" showWinnersOnly={true} />
+          </div>
+        ) : (
+          showWinners ? renderWinners() : renderCountdown()
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Save, ArrowLeft, Link, Video, FileText, Users, Tag } from 'lucide-react';
-import { useHackathon, Project } from '../contexts/HackathonContext';
+import { useHackathon, Project, ChallengeType } from '../contexts/HackathonContext';
 import TagInput from './TagInput';
 
 interface ProjectEditorProps {
@@ -65,7 +65,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({
       if (isInline && onCancel) {
         onCancel();
       } else {
-        onNavigate('hostDashboard');
+        onNavigate('hostDashboard', { activeTab: 'projects' });
       }
     } catch (error) {
       console.error('Save failed:', error);
@@ -78,7 +78,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({
     if (isInline && onCancel) {
       onCancel();
     } else {
-      onNavigate('hostDashboard');
+      onNavigate('hostDashboard', { activeTab: 'projects' });
     }
   };
 
@@ -107,7 +107,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({
     }));
   };
 
-  const toggleChallenge = (challenge: string) => {
+  const toggleChallenge = (challenge: ChallengeType) => {
     setProject(prev => ({
       ...prev,
       challengesEnrolled: prev.challengesEnrolled?.includes(challenge)
@@ -117,7 +117,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({
   };
 
   return (
-    <div className={isInline ? "space-y-6" : "quiz-panel"}>
+    <div className={isInline ? "space-y-6" : "quiz-panel h-[70vh] justify-start overflow-hidden"}>
       {!isInline && <div className="quiz-header">
         <div className="flex items-center gap-3">
           <button
@@ -287,7 +287,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({
             Challenges Enrolled
           </label>
           <div className="space-y-2">
-            {['featherless', 'aibuilders', 'blockchain', 'sustainability'].map(challenge => (
+            {(['featherless', 'activepieces', 'aibuilders'] as ChallengeType[]).map(challenge => (
               <label key={challenge} className="flex items-center gap-3">
                 <input
                   type="checkbox"

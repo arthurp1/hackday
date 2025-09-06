@@ -1,0 +1,154 @@
+{
+  "currentUser": null,
+  "projects": [],
+  "challenges": [
+    {
+      "id": "challenge-activepieces",
+      "type": "activepieces",
+      "title": "Automate Your AI Startup with ActivePieces",
+      "description": "Build one useful automation with ActivePieces.com that saves time or helps grow an AI startup.",
+      "prizes": [
+        { "type": "cash", "amount": 50, "currency": "€", "details": "€50 winner (best overall project)" },
+        { "type": "free_plan", "details": "6 months free ActivePieces for all participants (after signup + sharing email)" }
+      ],
+      "requirements": [
+        "Must use ActivePieces as the automation platform",
+        "Show a working demo (video or live)",
+        "Submit a short description: problem → automation → impact"
+      ],
+      "sponsorId": "sponsor-activepieces",
+      "tags": ["automation", "workflow", "ai-startup"]
+    },
+    {
+      "id": "challenge-featherless",
+      "type": "featherless",
+      "title": "Build with Multi-Model AI on Featherless",
+      "description": "Create a new project (or young startup) that uses at least 2 different GenAI models on featherless.ai.",
+      "prizes": [
+        { "type": "cash", "amount": 50, "currency": "€", "details": "€50 winner (best overall project)" },
+        { "type": "free_plan", "details": "1 month premium Featherless for all participants (via promo codes)" }
+      ],
+      "requirements": [
+        "Use at least 2 distinct GenAI models (or an agent system) on Featherless.ai",
+        "New project or young startup",
+        "Show a working demo (video or live)",
+        "Submit: problem → multi-model approach → impact"
+      ],
+      "sponsorId": "sponsor-featherless",
+      "tags": ["genai", "multi-model", "agents"]
+    },
+    {
+      "id": "challenge-aibuilders",
+      "type": "aibuilders",
+      "title": "Coolest AI App for AI Builders Club",
+      "description": "Build an app that integrates AI chat and is genuinely useful for the AI Builders community.",
+      "prizes": [
+        { "type": "cash", "amount": 50, "currency": "€", "details": "€50 winner (coolest + most useful app)" },
+        { "type": "voucher", "details": "Winning project featured in the AI Builders Club community" }
+      ],
+      "requirements": [
+        "Integrate AI chat as part of the solution",
+        "Solve a real need for the AI Builders community",
+        "Show a working demo (video or live)",
+        "Submit: problem → app → community impact"
+      ],
+      "sponsorId": "sponsor-aibuilders",
+      "tags": ["community", "chat", "tools"]
+    }
+  ],
+  "bounties": [],
+  "goodies": [],
+  "attendees": [
+    {
+      "id": "att-sponsor-1",
+      "name": "Darin (Featherless.ai)",
+      "firstName": "Darin",
+      "lastName": "(Featherless.ai)",
+      "email": "darin@featherless.ai",
+      "checkedIn": true,
+      "registeredAt": "2025-09-01T10:00:00.000Z",
+      "team": "Sponsors",
+      "sponsorId": "sponsor-featherless",
+      "projectId": null,
+      "wantsSolo": false
+    },
+    {
+      "id": "att-sponsor-2",
+      "name": "Kareem (ActivePieces.com)",
+      "firstName": "Kareem",
+      "lastName": "(ActivePieces.com)",
+      "email": "kareem@activepieces.com",
+      "checkedIn": true,
+      "registeredAt": "2025-09-01T10:00:00.000Z",
+      "team": "Sponsors",
+      "sponsorId": "sponsor-activepieces",
+      "projectId": null,
+      "wantsSolo": false
+    },
+    {
+      "id": "att-sponsor-3",
+      "name": "Arthur (AIBuilders.com)",
+      "firstName": "Arthur",
+      "lastName": "(AIBuilders.com)",
+      "email": "arthur@aibuilders.club",
+      "checkedIn": true,
+      "registeredAt": "2025-09-01T10:00:00.000Z",
+      "team": "Sponsors",
+      "sponsorId": "sponsor-aibuilders",
+      "projectId": null,
+      "wantsSolo": false
+    },
+    { "id": "att-101", "name": "Vinc", "firstName": "Vinc", "lastName": "", "email": "luma@fundamentalingu.ist", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [], "profile": { "bio": "Phone: +31624464413; Company: boostrappin' in stealth mode" } },
+    { "id": "att-102", "name": "Nataliia Radina", "firstName": "Nataliia", "lastName": "Radina", "email": "shyianovska@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [], "profile": { "bio": "Phone: +31614439914; Company: Petlinked" } },
+    { "id": "att-103", "name": "Manxia", "firstName": "Manxia", "lastName": "", "email": "hnulmx@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [], "profile": { "bio": "Phone: +31619239644" } },
+    { "id": "att-104", "name": "Lucas Zielstra", "firstName": "Lucas", "lastName": "Zielstra", "email": "lzielstra2001@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [], "profile": { "bio": "Phone: +31627088285; Company: Agentic marketplace" } },
+    { "id": "att-105", "name": "Ward", "firstName": "Ward", "lastName": "", "email": "wardleenders@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [], "profile": { "bio": "Phone: +31650263763" } },
+    { "id": "att-106", "name": "Bruno Pais", "firstName": "Bruno", "lastName": "Pais", "email": "bruno.pais88@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [], "profile": { "bio": "Phone: +31641119538; Company: Sennder.com" } },
+    { "id": "att-107", "name": "Ranga Bashyam", "firstName": "Ranga", "lastName": "Bashyam", "email": "boldbetspc@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-108", "name": "Daniel Bedrood", "firstName": "Daniel", "lastName": "Bedrood", "email": "d.bedrood@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-109", "name": "Loise Dijk", "firstName": "Loise", "lastName": "Dijk", "email": "loisedijk@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-110", "name": "Polina Plotnikova", "firstName": "Polina", "lastName": "Plotnikova", "email": "eplotnikova.polina@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-111", "name": "Vijay Kanhai", "firstName": "Vijay", "lastName": "Kanhai", "email": "djchief@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-112", "name": "Antonio Guerra", "firstName": "Antonio", "lastName": "Guerra", "email": "ajr@alarife.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-113", "name": "Rex", "firstName": "Rex", "lastName": "", "email": "novemberbravo27@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-114", "name": "Adriana Correia", "firstName": "Adriana", "lastName": "Correia", "email": "adriana.d.correia@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-115", "name": "Enrique Barrueco", "firstName": "Enrique", "lastName": "Barrueco", "email": "e.barrueco96@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-116", "name": "Robert Hilwerda", "firstName": "Robert", "lastName": "Hilwerda", "email": "roberthilwerda@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-117", "name": "Nick Krastev", "firstName": "Nick", "lastName": "Krastev", "email": "nickkrastev@hotmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-118", "name": "Tim Kapitein", "firstName": "Tim", "lastName": "Kapitein", "email": "tim+ai-builders@newblack.io", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-119", "name": "Flavius Marc", "firstName": "Flavius", "lastName": "Marc", "email": "flavius.m1996@yahoo.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-120", "name": "Olga", "firstName": "Olga", "lastName": "", "email": "olgamitrofanovanl@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-121", "name": "Eren Hamza", "firstName": "Eren", "lastName": "Hamza", "email": "erenhamzakocabas@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-122", "name": "Yulia Berezka", "firstName": "Yulia", "lastName": "Berezka", "email": "yulia@discoverlatitude.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-123", "name": "Anelya Grant JP", "firstName": "Anelya", "lastName": "Grant JP", "email": "anelya@justpaid.io", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-124", "name": "Khaled Tamimy", "firstName": "Khaled", "lastName": "Tamimy", "email": "khaled@socialtechnologylab.nl", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-125", "name": "Sam Hoejenbos", "firstName": "Sam", "lastName": "Hoejenbos", "email": "samhoejenbos@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-126", "name": "Jort van Meenen", "firstName": "Jort", "lastName": "van Meenen", "email": "jortvanmeenen@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-127", "name": "Bas Carter", "firstName": "Bas", "lastName": "Carter", "email": "sccarter267@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-128", "name": "Deniz Karamuk", "firstName": "Deniz", "lastName": "Karamuk", "email": "denizkaramuk1@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-129", "name": "Niels de Jong", "firstName": "Niels", "lastName": "de Jong", "email": "niels.dejong@neo4j.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-130", "name": "Bob", "firstName": "Bob", "lastName": "", "email": "bovandenberg@deloitte.nl", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-131", "name": "Aliya", "firstName": "Aliya", "lastName": "", "email": "aliyaadav@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-132", "name": "Subhaditya Mukherjee", "firstName": "Subhaditya", "lastName": "Mukherjee", "email": "msubhaditya@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-133", "name": "Remco Hendriks", "firstName": "Remco", "lastName": "Hendriks", "email": "remco@remcohendriks.nl", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-134", "name": "Julian Rooze", "firstName": "Julian", "lastName": "Rooze", "email": "julian.rooze@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-135", "name": "Vaibhav P", "firstName": "Vaibhav", "lastName": "P", "email": "8130355@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-136", "name": "Asparuh Stoyanov", "firstName": "Asparuh", "lastName": "Stoyanov", "email": "avstoyanoff@googlemail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-137", "name": "Markus Pfundstein", "firstName": "Markus", "lastName": "Pfundstein", "email": "markus@life-electronic.nl", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-138", "name": "Glenn", "firstName": "Glenn", "lastName": "", "email": "glenn.vanderlinde@zonneplan.nl", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-139", "name": "Arsen Ignatosyan", "firstName": "Arsen", "lastName": "Ignatosyan", "email": "ignatosyan@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-140", "name": "Geert Wood", "firstName": "Geert", "lastName": "Wood", "email": "geert@woodplukker.nl", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-141", "name": "Sahil", "firstName": "Sahil", "lastName": "", "email": "talktosahil17@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-142", "name": "Maarten Bode", "firstName": "Maarten", "lastName": "Bode", "email": "mail@maartenbode.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-143", "name": "Abhishek Dewangan", "firstName": "Abhishek", "lastName": "Dewangan", "email": "abhishekdewangannl@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-144", "name": "Jan Jaap van Noort", "firstName": "Jan Jaap", "lastName": "van Noort", "email": "jjvnoort@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-145", "name": "Nick Humphreys", "firstName": "Nick", "lastName": "Humphreys", "email": "nickhumphreys4@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-146", "name": "Yuri Sturkenboom", "firstName": "Yuri", "lastName": "Sturkenboom", "email": "yuri@joincruit.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-147", "name": "Vera", "firstName": "Vera", "lastName": "", "email": "dadasheva.vera@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-148", "name": "Amir Grabic", "firstName": "Amir", "lastName": "Grabic", "email": "grabicamir@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-149", "name": "Saurabh Jain", "firstName": "Saurabh", "lastName": "Jain", "email": "saurabhjain176@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] },
+    { "id": "att-150", "name": "James Byers", "firstName": "James", "lastName": "Byers", "email": "james.byers92@gmail.com", "checkedIn": false, "registeredAt": "2025-09-01T10:00:00.000Z", "wantsSolo": false, "skills": [] }
+  ],
+  "loading": false,
+  "error": null
+}

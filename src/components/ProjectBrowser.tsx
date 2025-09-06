@@ -30,9 +30,8 @@ const ProjectBrowser: React.FC<ProjectBrowserProps> = ({ onClose }) => {
   });
 
   const getProjectTeamMembers = (project: any) => {
-    return attendees.filter(attendee => 
-      project.teamMembers.includes(attendee.email)
-    );
+    const isHacker = (a: any) => a && typeof a.id === 'string' && a.id.startsWith('att-') && !((a.team || '').toLowerCase().includes('sponsors') || (a.team || '').toLowerCase() === 'host' || (a.team || '').toLowerCase() === 'hosts');
+    return attendees.filter(attendee => isHacker(attendee) && project.teamMembers.includes(attendee.email));
   };
 
   const getChallengeInfo = (challengeType: string) => {
@@ -143,6 +142,17 @@ const ProjectBrowser: React.FC<ProjectBrowserProps> = ({ onClose }) => {
                       <span className="text-blue-400">{member.firstName} {member.lastName}</span>
                       {member.profile?.city && (
                         <span className="text-gray-400">• {member.profile.city}</span>
+                      )}
+                      {member.profile?.linkedin && (
+                        <a
+                          href={member.profile.linkedin}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-cyan-400 hover:text-cyan-300"
+                          title="LinkedIn"
+                        >
+                          in
+                        </a>
                       )}
                     </div>
                   ))}

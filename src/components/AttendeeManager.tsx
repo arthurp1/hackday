@@ -17,13 +17,15 @@ const AttendeeManager: React.FC<AttendeeManagerProps> = ({
 }) => {
   const { state, updateAttendee, checkInAttendee } = useHackathon();
   const { attendees } = state;
+  const isHacker = (a: any) => a && typeof a.id === 'string' && a.id.startsWith('att-') && !((a.team || '').toLowerCase().includes('sponsors') || (a.team || '').toLowerCase() === 'host' || (a.team || '').toLowerCase() === 'hosts');
+  const hackerAttendees = attendees.filter(isHacker);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'checkedIn' | 'notCheckedIn'>('all');
   const [bulkAction, setBulkAction] = useState<'checkIn' | 'sendEmail' | ''>('');
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [processing, setProcessing] = useState(false);
 
-  const filteredAttendees = attendees.filter(attendee => {
+  const filteredAttendees = hackerAttendees.filter(attendee => {
     const matchesSearch = attendee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          attendee.email.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -85,9 +87,9 @@ const AttendeeManager: React.FC<AttendeeManagerProps> = ({
   };
 
   const stats = {
-    total: attendees.length,
-    checkedIn: attendees.filter(a => a.checkedIn).length,
-    notCheckedIn: attendees.filter(a => !a.checkedIn).length
+    total: hackerAttendees.length,
+    checkedIn: hackerAttendees.filter(a => a.checkedIn).length,
+    notCheckedIn: hackerAttendees.filter(a => !a.checkedIn).length
   };
 
   const handleCancel = () => {

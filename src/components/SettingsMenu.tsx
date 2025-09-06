@@ -13,8 +13,8 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
   onTogglePortalAnimations,
   onLogout
 }) => {
-  const { state, logout } = useHackathon();
-  const { currentUser } = state;
+  const { state, logout, downloadStateJson, setPhase } = useHackathon();
+  const { currentUser, phase } = state as any;
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -134,16 +134,6 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
       {/* Settings Menu */}
       {isOpen && (
         <div className="absolute top-12 right-0 w-80 bg-black/90 backdrop-blur-xl border border-cyan-500/30 rounded-lg shadow-2xl overflow-hidden">
-          {/* Countdown Summary (without label) */}
-          <div className="p-4 border-b border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 to-blue-500/10">
-            <div className="flex items-center gap-2 mb-1">
-              <Clock className="w-4 h-4 text-cyan-400" />
-              <div className="text-white font-bold text-lg">{nextEvent.timeLeft}</div>
-            </div>
-            <div className="text-sm text-gray-300">
-              {nextEvent.emoji} {nextEvent.time} - {nextEvent.event}
-            </div>
-          </div>
 
           {/* Schedule */}
           <div className="p-3 border-b border-cyan-500/20 bg-black/30">
@@ -179,6 +169,48 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
 
           {/* Settings Options */}
           <div className="p-2">
+            {/* Public Debug Controls: Phase toggles */}
+            <div className="mb-2 p-2 rounded bg-black/40 border border-yellow-500/20">
+              <div className="text-xs text-yellow-300 mb-1">Debug: Phase Controls</div>
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => downloadStateJson()}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-white/10 rounded"
+                  >
+                    Download State (JSON)
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const next = { votingOpen: !((phase && phase.votingOpen) || false), announce: !!(phase && phase.announce) };
+                      await setPhase(next);
+                      window.dispatchEvent(new Event('phase-updated'));
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-cyan-300 hover:bg-cyan-500/10 rounded"
+                  >
+                    {phase?.votingOpen ? 'Close Sponsor Voting' : 'Open Sponsor Voting'}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const next = { votingOpen: !!(phase && phase.votingOpen), announce: !((phase && phase.announce) || false) };
+                      await setPhase(next);
+                      window.dispatchEvent(new Event('phase-updated'));
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-green-300 hover:bg-green-500/10 rounded"
+                  >
+                    {phase?.announce ? 'Unset Winner Announced' : 'Set Winner Announced'}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await setPhase({ votingOpen: false, announce: false });
+                      window.dispatchEvent(new Event('phase-updated'));
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-red-300 hover:bg-red-500/10 rounded"
+                  >
+                    Reset Phases (Editing/Normal)
+                  </button>
+                </div>
+            </div>
+
             {/* Portal Animations Toggle */}
             <button
               onClick={() => onTogglePortalAnimations(!portalAnimationsEnabled)}

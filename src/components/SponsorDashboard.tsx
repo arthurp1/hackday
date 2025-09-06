@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Building2, Trophy, Plus, Edit3, Eye, DollarSign, Gift, Zap, User, Download, Users, FileText } from 'lucide-react';
+import { Building2, Trophy, Plus, Edit3, Eye, Gift, Zap, User, Download, Users, FileText, ExternalLink, Video } from 'lucide-react';
 import { useHackathon } from '../contexts/HackathonContext';
 import BountyEditor from './BountyEditor';
 import ChallengeEditor from './ChallengeEditor';
 import GoodieEditor from './GoodieEditor';
 import ProfileEditor from './ProfileEditor';
+import Enrollment from './Enrollment';
 
 interface SponsorDashboardProps {
   hostDashboardData?: any;
@@ -33,17 +34,7 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
   const myChallenges = challenges.filter(c => c.sponsorId === currentUser?.id);
   const myGoodies = goodies.filter(g => g.sponsorId === currentUser?.id);
   
-  const stats = {
-    totalChallenges: myChallenges.length,
-    totalBounties: myBounties.length,
-    activeBounties: myBounties.filter(b => b.status === 'open').length,
-    claimedBounties: myBounties.filter(b => b.status === 'claimed').length,
-    totalGoodies: myGoodies.length,
-    totalPrizeValue: [
-      ...myBounties.flatMap(b => b.prizes),
-      ...myChallenges.flatMap(c => c.prizes)
-    ].reduce((sum, p) => sum + (p.amount || 0), 0)
-  };
+  // Stats removed as counters are no longer displayed
 
   // CSV Export Functions
   const exportAttendeesCSV = () => {
@@ -130,165 +121,38 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
     setHostDashboardData({ ...hostDashboardData, editingItem: null });
   };
 
+  const canVoteNow = () => {
+    try {
+      const flag = localStorage.getItem('phase-voting-open') === 'true';
+      const now = new Date();
+      return flag || now.getHours() >= 18; // allow after 18:00 local time
+    } catch {
+      return false;
+    }
+  };
+
+  const hasVoted = (projectId: string) => {
+    const voter = currentUser?.email || currentUser?.id || 'anon';
+    return localStorage.getItem(`vote-${projectId}-${voter}`) === 'true';
+  };
+
+  const toggleVote = (projectId: string) => {
+    const voter = currentUser?.email || currentUser?.id || 'anon';
+    const key = `vote-${projectId}-${voter}`;
+    const isVoted = localStorage.getItem(key) === 'true';
+    localStorage.setItem(key, (!isVoted).toString());
+  };
+
+  const getWinnerProject = () => localStorage.getItem('winner-project');
+  const pickWinner = (projectId: string) => {
+    localStorage.setItem('winner-project', projectId);
+    // Ensure winner phase is active so the banner/button appears
+    localStorage.setItem('phase-announce', 'true');
+  };
+
   const renderOverview = () => (
     <div className="space-y-6">
-      {/* Export Section */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">Overview & Exports</h3>
-        <div className="flex gap-2">
-          <button
-            onClick={exportAttendeesCSV}
-            className="flex items-center gap-2 px-3 py-2 bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 hover:bg-green-500/30 transition-colors text-sm"
-            title="Export attendees grouped by project to CSV"
-          >
-            <Users className="w-4 h-4" />
-            <Download className="w-4 h-4" />
-          </button>
-          <button
-            onClick={exportProjectsCSV}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/30 transition-colors text-sm"
-            title="Export projects grouped by challenges to CSV"
-          >
-            <FileText className="w-4 h-4" />
-            <Download className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-3">
-        <div className="p-3 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-lg border border-cyan-500/20">
-          <div className="flex items-center gap-2">
-            <Zap className="w-6 h-6 text-cyan-400" />
-            <div>
-              <div className="text-lg font-bold text-white">{stats.totalChallenges}</div>
-              <div className="text-xs text-cyan-400">Challenges</div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
-          <div className="flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-purple-400" />
-            <div>
-              <div className="text-2xl font-bold text-white">{stats.activeBounties}/{stats.totalBounties}</div>
-              <div className="text-sm text-purple-400">Active Bounties</div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-3 bg-gradient-to-r from-pink-500/10 to-rose-500/10 rounded-lg border border-pink-500/20">
-          <div className="flex items-center gap-2">
-            <Gift className="w-6 h-6 text-pink-400" />
-            <div>
-              <div className="text-lg font-bold text-white">{stats.totalGoodies}</div>
-              <div className="text-xs text-pink-400">Goodies</div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/20">
-          <div className="flex items-center gap-3">
-            <DollarSign className="w-8 h-8 text-green-400" />
-            <div>
-              <div className="text-2xl font-bold text-white">${stats.totalPrizeValue.toLocaleString()}</div>
-              <div className="text-sm text-green-400">Total Prize Value</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Projects Overview */}
-      <div>
-        <h3 className="text-lg font-semibold text-white mb-3">Projects Using Your Challenges/Bounties</h3>
-        <div className="space-y-2">
-          {projects
-            .filter(p => 
-              p.challengesEnrolled.some(c => myChallenges.some(mc => mc.type === c)) || 
-              myBounties.some(b => b.id === p.bountyId)
-            )
-            .map(project => {
-              const projectAttendees = attendees.filter(a => a.projectId === project.id);
-              const bounty = myBounties.find(b => b.id === project.bountyId);
-              return (
-                <div key={project.id} className="p-3 bg-black/20 rounded-lg border border-white/10">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <span className="font-medium text-white">{project.name}</span>
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          project.status === 'submitted' ? 'bg-green-500/20 text-green-400' :
-                          project.status === 'draft' ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-gray-500/20 text-gray-400'
-                        }`}>
-                          {project.status}
-                        </span>
-                      </div>
-                      
-                      <div className="text-sm text-gray-400 mb-2">
-                        Team: {project.teamName} ({projectAttendees.length} members)
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {project.challengesEnrolled
-                          .filter(c => myChallenges.some(mc => mc.type === c))
-                          .map(challenge => (
-                            <span key={challenge} className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs">
-                              {challenge}
-                            </span>
-                          ))}
-                        {bounty && (
-                          <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">
-                            Bounty: {bounty.title}
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="text-xs text-gray-500">
-                        Members: {projectAttendees.map(a => `${a.firstName} ${a.lastName}`).join(', ')}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
-        <div className="space-y-2">
-          {myChallenges.slice(0, 2).map(challenge => (
-            <div key={challenge.id} className="p-3 bg-black/20 rounded-lg border border-white/10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium text-white">{challenge.title}</div>
-                  <div className="text-sm text-cyan-400">Challenge</div>
-                </div>
-                <div className="text-sm text-green-400">
-                  {challenge.prizes.map(p => `${p.currency}${p.amount}`).join(' + ')}
-                </div>
-              </div>
-            </div>
-          ))}
-          {myBounties.slice(0, 3).map(bounty => (
-            <div key={bounty.id} className="p-3 bg-black/20 rounded-lg border border-white/10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium text-white">{bounty.title}</div>
-                  <div className="text-sm text-gray-400">Bounty</div>
-                </div>
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  bounty.status === 'open' ? 'bg-green-500/20 text-green-400' :
-                  bounty.status === 'claimed' ? 'bg-blue-500/20 text-blue-400' :
-                  'bg-gray-500/20 text-gray-400'
-                }`}>
-                  {bounty.status}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <Enrollment mode="sponsor" />
     </div>
   );
 
@@ -519,7 +383,7 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
   );
 
   return (
-    <div className="quiz-panel">
+    <div className="quiz-panel h-[70vh] justify-start overflow-hidden">
       {/* Profile Notification (clickable, dismissible) */}
       {currentUser && (!currentUser.profile?.city || !currentUser.profile?.linkedin) && (() => {
         const dismissedKey = `profile-banner-dismissed-${currentUser.email}`;

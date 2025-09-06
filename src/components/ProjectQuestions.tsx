@@ -4,13 +4,14 @@ import { Lightbulb, ChevronRight, Zap, Workflow, ArrowLeft, FileText } from 'luc
 interface ProjectQuestionsProps {
   formData: any;
   setFormData: (data: any) => void;
-  onNavigate: (screen: string, data?: any) => void;
+  onNavigate: (screen: string, data?: any, skipAnimation?: boolean) => void;
   uiState: string;
 }
 
 const ProjectQuestions: React.FC<ProjectQuestionsProps> = ({ formData, setFormData: _setFormData, onNavigate, uiState: _uiState }) => {
   const [answers, setAnswers] = useState<{ usesLLM?: boolean; usesIntegrations?: boolean; willingToShareSource?: boolean }>({
     usesLLM: true, // Auto-select "Yes"
+    usesIntegrations: true, // Auto-select "Yes"
     willingToShareSource: true // Auto-select "Yes"
   });
 
@@ -37,7 +38,7 @@ const ProjectQuestions: React.FC<ProjectQuestionsProps> = ({ formData, setFormDa
       usesLLM: answers.usesLLM,
       usesIntegrations: answers.usesIntegrations,
       willingToShareSource: answers.willingToShareSource
-    });
+    }, true);
   };
 
   return (
@@ -93,8 +94,9 @@ const ProjectQuestions: React.FC<ProjectQuestionsProps> = ({ formData, setFormDa
         {/* Question 2: Integrations */}
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-white">
-            Do you think you will use many integrations (eg. Notion, Gmail, Documents, Social Media, Database etc.)?
+            Do you think you will use many integrations?
           </h3>
+          <p className="text-xs text-gray-400">eg. Notion, Gmail, Documents, Social Media, Database etc.</p>
           <div className="flex gap-3">
             <button
               onClick={() => handleAnswerChange('usesIntegrations', true)}
