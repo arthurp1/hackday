@@ -4,6 +4,7 @@ import { useHackathon, Project, ProjectType, ChallengeType } from '../contexts/H
 import TagInput from './TagInput';
 import EmailAutocomplete from './EmailAutocomplete';
 import ProjectBrowser from './ProjectBrowser';
+import FaqPanel from './FaqPanel';
 import ProfileEditor from './ProfileEditor';
 import ChallengeEnrollmentModal from './ChallengeEnrollmentModal';
 
@@ -20,7 +21,7 @@ const HackerProject: React.FC<HackerProjectProps> = ({
   formData,
   setFormData: _setFormData
 }) => {
-  const { state, updateProject, createProject, claimBounty } = useHackathon();
+  const { state, updateProject, createProject, claimBounty, importStateJson } = useHackathon();
   const { projects, challenges, bounties, goodies, currentUser } = state;
   
   // Initialize project from questionnaire data or existing project
@@ -32,6 +33,7 @@ const HackerProject: React.FC<HackerProjectProps> = ({
     demoUrl: '',
     videoDemo: '',
     slides: '',
+    githubUrl: '',
     challengesEnrolled: [],
     bountyId: undefined,
     type: formData?.projectType || 'newProject',
@@ -44,8 +46,8 @@ const HackerProject: React.FC<HackerProjectProps> = ({
   // Tabs now control browsing and profile editing; no separate modals needed
   const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeType | null>(null);
-  const [activeTab, setActiveTab] = useState<'basic' | 'links' | 'team' | 'challenges' | 'goodies' | 'browse' | 'profile'>('basic');
-  const saveTimer = useRef<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'basic' | 'links' | 'team' | 'challenges' | 'goodies' | 'browse' | 'profile' | 'faq'>('basic');
+  const [showBestPractices, setShowBestPractices] = useState<boolean>(false);
   const lastSaved = useRef<string>('');
   const [enrollmentLocked, setEnrollmentLocked] = useState<boolean>(() => {
     try {
@@ -86,6 +88,34 @@ const HackerProject: React.FC<HackerProjectProps> = ({
     }
   }, [projects, currentUser, formData]);
 
+  // Listen for global requests to open the profile editor
+  useEffect(() => {
+    const handler = () => setActiveTab('profile');
+    window.addEventListener('open-profile-editor', handler as EventListener);
+    return () => window.removeEventListener('open-profile-editor', handler as EventListener);
+  }, []);
+
+  // Reload global state on tab switches (no autosave)
+  const reloadGlobalState = async () => {
+    try {
+      const res = await fetch('/src/contexts/state.json');
+      if (res.ok) {
+        const json = await res.text();
+        await importStateJson(json);
+      }
+    } catch (e) {
+      console.warn('Failed to reload state.json', e);
+    }
+  };
+
+  const handleTabChange = async (key: typeof activeTab) => {
+    // Skip reload on read-only tabs to avoid unnecessary fetches
+    if (key !== 'browse' && key !== 'faq') {
+      await reloadGlobalState();
+    }
+    setActiveTab(key);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -115,6 +145,7 @@ const HackerProject: React.FC<HackerProjectProps> = ({
         teamMembers: projectData.teamMembers,
         description: projectData.description,
         demoUrl: projectData.demoUrl,
+        githubUrl: projectData.githubUrl,
         videoDemo: projectData.videoDemo,
         slides: projectData.slides,
         tags: projectData.tags,
@@ -131,37 +162,7 @@ const HackerProject: React.FC<HackerProjectProps> = ({
     }
   };
 
-  // Autosave when project changes on any tab except profile
-  useEffect(() => {
-    if (activeTab === 'profile') return; // do not autosave on profile tab
-    if (!project.name) return; // require a name before saving
-    // Only save if project differs from last saved snapshot
-    const pendingSnapshot = JSON.stringify({
-      name: project.name,
-      teamName: project.teamName,
-      teamMembers: project.teamMembers,
-      description: project.description,
-      demoUrl: project.demoUrl,
-      videoDemo: project.videoDemo,
-      slides: project.slides,
-      tags: project.tags,
-      challengesEnrolled: project.challengesEnrolled,
-      type: project.type,
-      bountyId: project.type === 'bounty' ? selectedBounty : undefined,
-      status: project.status
-    });
-    if (pendingSnapshot === lastSaved.current) return;
-    if (saveTimer.current) {
-      window.clearTimeout(saveTimer.current);
-    }
-    saveTimer.current = window.setTimeout(() => {
-      // Fire and forget
-      handleSave();
-    }, 1500) as unknown as number;
-    return () => {
-      if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    };
-  }, [project, activeTab]);
+  // Remove autosave: saving only occurs on explicit Save click
 
   // Removed unused handleEnrollChallenge to satisfy lints
 
@@ -294,7 +295,7 @@ const HackerProject: React.FC<HackerProjectProps> = ({
         <div className="flex items-center gap-3">
           <ProjectTypeIcon className="w-10 h-10 text-green-400" />
           <div>
-            <h2 className="text-base font-bold text-white">Hackday Project & Submission</h2>
+            <h2 className="text-base font-bold text-white">Hackday Project</h2>
           </div>
         </div>
       </div>
@@ -307,16 +308,15 @@ const HackerProject: React.FC<HackerProjectProps> = ({
       <div className="flex gap-1 mb-4">
         {([
             { key: 'basic', label: 'Basic Info' },
-            { key: 'links', label: 'Links' },
             { key: 'team', label: 'Team' },
             { key: 'challenges', label: 'Challenges' },
             ...(goodies && goodies.length > 0 ? ([{ key: 'goodies', label: 'Goodies' }] as const) : ([] as const)),
             { key: 'browse', label: 'Browse Projects' },
-            { key: 'profile', label: 'Edit Profile' }
+            { key: 'faq', label: 'FAQ' }
           ] as const).map(({ key, label }) => (
           <button
             key={key}
-            onClick={() => setActiveTab(key)}
+            onClick={() => handleTabChange(key)}
             className={`px-3 py-2 rounded-lg text-sm transition-colors ${
               activeTab === key
                 ? 'bg-green-500/20 text-green-400 border border-green-500/30'
@@ -352,43 +352,6 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                     {label}
                   </button>
                 ))}
-              </div>
-            </div>
-
-            {/* Links (quick access) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Links</label>
-              <div className="grid grid-cols-1 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1">Demo URL</label>
-                  <input
-                    type="url"
-                    value={project.demoUrl || ''}
-                    onChange={(e) => updateField('demoUrl', e.target.value)}
-                    className="w-full px-3 py-2 bg-black/30 border border-green-500/30 rounded-lg text-white placeholder-gray-400 focus:border-green-500 focus:outline-none text-sm"
-                    placeholder="https://your-demo.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1">Video Demo</label>
-                  <input
-                    type="url"
-                    value={project.videoDemo || ''}
-                    onChange={(e) => updateField('videoDemo', e.target.value)}
-                    className="w-full px-3 py-2 bg-black/30 border border-green-500/30 rounded-lg text-white placeholder-gray-400 focus:border-green-500 focus:outline-none text-sm"
-                    placeholder="https://youtube.com/watch?v=..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1">Slides</label>
-                  <input
-                    type="url"
-                    value={project.slides || ''}
-                    onChange={(e) => updateField('slides', e.target.value)}
-                    className="w-full px-3 py-2 bg-black/30 border border-green-500/30 rounded-lg text-white placeholder-gray-400 focus:border-green-500 focus:outline-none text-sm"
-                    placeholder="https://slides.com/presentation"
-                  />
-                </div>
               </div>
             </div>
 
@@ -530,6 +493,53 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                 ))}
               </div>
             </div>
+
+            {/* Links */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Links</label>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1">Demo URL</label>
+                  <input
+                    type="url"
+                    value={project.demoUrl || ''}
+                    onChange={(e) => updateField('demoUrl', e.target.value)}
+                    className="w-full px-3 py-2 bg-black/30 border border-green-500/30 rounded-lg text-white placeholder-gray-400 focus:border-green-500 focus:outline-none text-sm"
+                    placeholder="https://your-demo.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1">Demo Video URL (optional)</label>
+                  <input
+                    type="url"
+                    value={project.videoDemo || ''}
+                    onChange={(e) => updateField('videoDemo', e.target.value)}
+                    className="w-full px-3 py-2 bg-black/30 border border-green-500/30 rounded-lg text-white placeholder-gray-400 focus:border-green-500 focus:outline-none text-sm"
+                    placeholder="https://youtube.com/watch?v=..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1">Slides URL (optional)</label>
+                  <input
+                    type="url"
+                    value={project.slides || ''}
+                    onChange={(e) => updateField('slides', e.target.value)}
+                    className="w-full px-3 py-2 bg-black/30 border border-green-500/30 rounded-lg text-white placeholder-gray-400 focus:border-green-500 focus:outline-none text-sm"
+                    placeholder="https://slides.com/presentation"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">GitHub URL</label>
+                  <input
+                    type="url"
+                    value={project.githubUrl || ''}
+                    onChange={(e) => updateField('githubUrl', e.target.value)}
+                    className="w-full px-3 py-2 bg-black/30 border border-green-500/30 rounded-lg text-white placeholder-gray-400 focus:border-green-500 focus:outline-none text-sm"
+                    placeholder="https://github.com/org/repo"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -559,7 +569,7 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                         <div className="flex items-start gap-3">
                           <Icon className="w-5 h-5 text-purple-400 mt-0.5" />
                           <div className="flex-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 mb-1">
                               <span className="font-medium text-white">{g.title}</span>
                               {g.forEveryone && (
                                 <span className="px-2 py-0.5 bg-green-500/20 text-green-300 rounded-full text-2xs">For Everyone</span>
@@ -569,10 +579,10 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                               )}
                             </div>
                             {g.description && (
-                              <p className="text-sm text-gray-300 mt-1">{g.description}</p>
+                              <p className="text-sm text-gray-300 mb-2">{g.description}</p>
                             )}
                             {(g.details || urlMatch) && (
-                              <div className="text-xs text-gray-400 mt-1">
+                              <div className="text-xs text-gray-300 space-y-1">
                                 {urlMatch ? (
                                   <>
                                     <span className="mr-2">Instructions:</span>
@@ -611,6 +621,7 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                       value={member}
                       onChange={(email) => updateTeamMember(index, email)}
                       placeholder="team.member@example.com"
+                      autoFocus={!member}
                       className="flex-1"
                     />
                     {project.teamMembers && project.teamMembers.length > 1 && (
@@ -629,44 +640,6 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                 >
                   + Add Member
                 </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'links' && (
-          <div className="space-y-4">
-            {/* URLs */}
-            <div className="grid grid-cols-1 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Demo URL</label>
-                <input
-                  type="url"
-                  value={project.demoUrl || ''}
-                  onChange={(e) => updateField('demoUrl', e.target.value)}
-                  className="w-full px-3 py-2 bg-black/30 border border-green-500/30 rounded-lg text-white placeholder-gray-400 focus:border-green-500 focus:outline-none text-sm"
-                  placeholder="https://your-demo.com"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Video Demo</label>
-                <input
-                  type="url"
-                  value={project.videoDemo || ''}
-                  onChange={(e) => updateField('videoDemo', e.target.value)}
-                  className="w-full px-3 py-2 bg-black/30 border border-green-500/30 rounded-lg text-white placeholder-gray-400 focus:border-green-500 focus:outline-none text-sm"
-                  placeholder="https://youtube.com/watch?v=..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Slides</label>
-                <input
-                  type="url"
-                  value={project.slides || ''}
-                  onChange={(e) => updateField('slides', e.target.value)}
-                  className="w-full px-3 py-2 bg-black/30 border border-green-500/30 rounded-lg text-white placeholder-gray-400 focus:border-green-500 focus:outline-none text-sm"
-                  placeholder="https://slides.com/presentation"
-                />
               </div>
             </div>
           </div>
@@ -788,9 +761,57 @@ const HackerProject: React.FC<HackerProjectProps> = ({
             <ProfileEditor isInline={true} />
           </div>
         )}
+        {activeTab === 'faq' && (
+          <div className="space-y-4">
+            {/* Demo Best Practices (moved from Links) */}
+            <div className="mt-2 border border-white/10 rounded-lg p-3 bg-black/30">
+              <button
+                onClick={() => setShowBestPractices(v => !v)}
+                className="text-cyan-400 hover:text-cyan-300 text-sm underline"
+              >
+                {showBestPractices ? 'Hide' : 'Show'} Demo Best Practices
+              </button>
+              {showBestPractices && (
+                <div className="mt-2 text-sm text-gray-200 space-y-2">
+                  <div>
+                    <span className="font-semibold">Best practices:</span> 5 min demo + 5 min slides
+                  </div>
+                  <div>
+                    ⚡💻 <span className="font-semibold">Hackday Demo (10 min)</span> Show HOW it’s built, especially how you implemented AI features, Stack, admin
+                  </div>
+                  <div>
+                    ✅ Demo your most advanced AI feature + Challenges and solutions. ✅ <span className="font-semibold">IDEAL FORMAT:</span>
+                  </div>
+                  <ul className="list-disc list-inside space-y-1 text-gray-300">
+                    <li>1x Personal intro slide</li>
+                    <li>1x Problem/Solution slide</li>
+                    <li>|💻DEMO💻|</li>
+                    <li>5 slides: Personal Intro, AI challenge/solution slides, Stack / architecture diagram</li>
+                    <li>And, interesting code snippets, prompts, or insights/challenges along the way</li>
+                  </ul>
+                  <div className="font-semibold">🚀 PRO TIPS:</div>
+                  <ul className="list-disc list-inside space-y-1 text-gray-300">
+                    <li>Use Fullscreen mode (fn + F)</li>
+                    <li>Add many visuals/memes</li>
+                    <li>Readability is key: big fonts (20pt+) and simplify code/diagrams/prompts</li>
+                    <li>End with an unsolved challenge or request!</li>
+                  </ul>
+                  <div className="text-xs text-gray-400">
+                    Next meetup dates: <a href="https://lu.ma/ai-builders" target="_blank" rel="noreferrer" className="text-cyan-400 underline">lu.ma/ai-builders</a>
+                    {' '}•{' '}
+                    Got 2 challenges in mind? Book a call: <a href="https://aib.club/call-arthurp" target="_blank" rel="noreferrer" className="text-cyan-400 underline">aib.club/call-arthurp</a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Editable FAQ list */}
+            <FaqPanel isHost={state.currentUser?.type === 'host'} />
+          </div>
+        )}
       </div>
 
-      {activeTab !== 'profile' && (
+      {!(activeTab === 'profile' || activeTab === 'browse' || activeTab === 'faq') && (
         <div className="quiz-actions">
           {activeTab === 'challenges' ? (
             enrollmentLocked ? (

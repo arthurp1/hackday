@@ -1,5 +1,5 @@
 import React from 'react';
-import { Code, ChevronRight, ArrowLeft, Mail, User } from 'lucide-react';
+import { Code, ChevronRight, Mail, User } from 'lucide-react';
 import { Search } from 'lucide-react';
 import { useHackathon, User as UserType } from '../contexts/HackathonContext';
 
@@ -11,16 +11,28 @@ interface HackerSignupProps {
   uiState: string;
 }
 
-const HackerSignup: React.FC<HackerSignupProps> = ({ formData, setFormData, onNavigate, onLogin, uiState }) => {
+const HackerSignup: React.FC<HackerSignupProps> = ({ formData: _formData, setFormData: _setFormData, onNavigate, onLogin, uiState: _uiState }) => {
   const { state, login } = useHackathon();
   const { attendees } = state;
   const [step, setStep] = React.useState<'select' | 'email'>('select');
   const [selectedAccount, setSelectedAccount] = React.useState<any>(null);
   const [email, setEmail] = React.useState('');
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [attempts, setAttempts] = React.useState(0);
+  const [lockUntil, setLockUntil] = React.useState<number | null>(null);
+  const [error, setError] = React.useState<string>('');
   
-  // Build account list from global attendees
-  const premadeAccounts = attendees.map(a => ({
+  // Build account list from global attendees (exclude sponsors/hosts/teams)
+  const visibleAttendees = attendees.filter(a => {
+    const team = (a as any).team ? String((a as any).team).toLowerCase() : '';
+    const role = (a as any).type ? String((a as any).type).toLowerCase() : '';
+    return !(
+      team.includes('sponsor') || team === 'host' || team === 'hosts' ||
+      role === 'sponsor' || role === 'host'
+    );
+  });
+
+  const premadeAccounts = visibleAttendees.map(a => ({
     firstName: a.firstName || a.name?.split(' ')[0] || 'Hacker',
     lastName: a.lastName || a.name?.split(' ').slice(1).join(' ') || '',
     email: a.email,
@@ -39,28 +51,72 @@ const HackerSignup: React.FC<HackerSignupProps> = ({ formData, setFormData, onNa
 
   const handleAccountSelect = (account: any) => {
     setSelectedAccount(account);
-    setEmail(account.email);
+    // Do not prefill email in production
+    if (import.meta.env.MODE !== 'production') {
+      setEmail(account.email);
+    } else {
+      setEmail('');
+    }
     setStep('email');
   };
 
+  const normalize = (s: string) => (s || '').trim().toLowerCase();
+  const maskEmail = (e: string) => {
+    const [user, domain] = e.split('@');
+    if (!user || !domain) return e;
+    const maskedUser = user.length <= 1 ? user : `${user[0]}${'*'.repeat(Math.max(0, user.length - 1))}`;
+    const domainParts = domain.split('.');
+    const domainName = domainParts[0] || '';
+    const tld = domainParts.slice(1).join('.') || '';
+    const maskedDomainName = domainName.length <= 1 ? domainName : `${domainName[0]}${'*'.repeat(Math.max(0, domainName.length - 1))}`;
+    const maskedTld = tld ? tld.replace(/\w/g, '*') : '';
+    return `${maskedUser}@${maskedDomainName}${maskedTld ? '.' + maskedTld : ''}`;
+  };
+
+  React.useEffect(() => {
+    if (lockUntil === null) return;
+    const id = setInterval(() => {
+      if (Date.now() >= lockUntil) {
+        setLockUntil(null);
+        setAttempts(0);
+        setError('');
+      }
+    }, 250);
+    return () => clearInterval(id);
+  }, [lockUntil]);
+
   const handleEmailSubmit = async () => {
-    if (email.trim() && selectedAccount) {
-      // Create hacker user and login based on selected attendee
-      const hackerUser: UserType = {
-        id: `hacker-${Date.now()}`,
-        type: 'hacker',
-        name: `${selectedAccount.firstName} ${selectedAccount.lastName}`.trim(),
-        email: email,
-        onboardingCompleted: false,
-        onboardingData: {}
-      };
-      
-      await login(hackerUser);
-      onLogin(hackerUser);
-      
-      // Navigate to onboarding
-      onNavigate('projectQuestions', {});
+    if (!selectedAccount) return;
+    if (!email.trim()) return;
+    if (lockUntil && Date.now() < lockUntil) return;
+
+    const target = normalize(selectedAccount.email);
+    const input = normalize(email);
+    if (input !== target) {
+      const nextAttempts = attempts + 1;
+      setAttempts(nextAttempts);
+      if (nextAttempts >= 3) {
+        setLockUntil(Date.now() + 5000); // 5s lockout
+        setError('Too many tries. Please wait 5 seconds and try again.');
+      } else {
+        setError('Email does not match our records for this registration.');
+      }
+      return;
     }
+
+    // Matched: create hacker user and login based on selected attendee
+    const hackerUser: UserType = {
+      id: `hacker-${Date.now()}`,
+      type: 'hacker',
+      name: `${selectedAccount.firstName} ${selectedAccount.lastName}`.trim(),
+      email: selectedAccount.email,
+      onboardingCompleted: false,
+      onboardingData: {}
+    };
+
+    await login(hackerUser);
+    onLogin(hackerUser);
+    onNavigate('projectQuestions', {});
   };
   
   const renderAccountSelection = () => (
@@ -111,13 +167,12 @@ const HackerSignup: React.FC<HackerSignupProps> = ({ formData, setFormData, onNa
   
   const renderEmailStep = () => (
     <>
-      <div className="question-container">
+      <div className="question-container grid gap-1">
         <h3 className="question-text">
-          Confirm your email address
+          Fill in your Luma email for verification
         </h3>
-        <p className="text-sm text-gray-400 mt-2">
-          Selected: {getDisplayName(selectedAccount)}
-          {selectedAccount.company && <span className="text-green-400"> • {selectedAccount.company}</span>}
+        <p className="text-sm text-gray-400 mt-1">
+          No email will be sent. Please enter the same email you used to register. Expected: <span className="text-green-400">{maskEmail(selectedAccount.email)}</span>
         </p>
       </div>
 
@@ -136,16 +191,19 @@ const HackerSignup: React.FC<HackerSignupProps> = ({ formData, setFormData, onNa
             autoFocus
           />
         </div>
+        {error && (
+          <div className="text-xs text-red-300">{error}</div>
+        )}
       </div>
 
       <div className="quiz-actions">
         <button 
           onClick={handleEmailSubmit}
-          disabled={!email.trim()}
+          disabled={!email.trim() || (lockUntil !== null && Date.now() < lockUntil)}
           className="quiz-btn primary"
         >
           <ChevronRight className="w-5 h-5" />
-          Continue
+          {lockUntil && Date.now() < lockUntil ? `Retry in ${Math.ceil((lockUntil - Date.now())/1000)}s` : 'Continue'}
         </button>
       </div>
     </>

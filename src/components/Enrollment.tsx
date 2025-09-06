@@ -142,7 +142,6 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-semibold text-white">{ch.title}</span>
-                      <span className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs">{ch.type}</span>
                       {getSponsorWebsite(ch.sponsorId) && (
                         <a
                           href={getSponsorWebsite(ch.sponsorId)!}
@@ -154,7 +153,7 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
                         </a>
                       )}
                     </div>
-                    <p className="text-sm text-gray-300">{ch.description}</p>
+                    {/* Description removed per request */}
                   </div>
                   {(() => {
                     const winnerId = getWinnerForChallenge(ch.type);

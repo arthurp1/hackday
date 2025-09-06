@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useHackathon } from '../contexts/HackathonContext';
 import { HackathonProvider } from '../contexts/HackathonContext';
 import SettingsMenu from './SettingsMenu';
+import ProfileEditor from './ProfileEditor';
 import CountdownTimer from './CountdownTimer';
 import { ArrowLeft } from 'lucide-react';
 import WelcomeScreen from './WelcomeScreen';
@@ -52,6 +53,7 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
   });
   const computeShowWinners = () => !!(state.phase && (state.phase.votingOpen || state.phase.announce));
   const showWinners = computeShowWinners();
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const winnersPickedAll = () => {
     const ch = state.challenges || [];
     if (ch.length === 0) return false;
@@ -68,6 +70,13 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
     const onPhaseUpdated = () => {};
     window.addEventListener('phase-updated', onPhaseUpdated as any);
     return () => window.removeEventListener('phase-updated', onPhaseUpdated as any);
+  }, []);
+
+  // Listen for global open-profile-editor event to show modal
+  useEffect(() => {
+    const handler = () => setShowProfileModal(true);
+    window.addEventListener('open-profile-editor', handler as EventListener);
+    return () => window.removeEventListener('open-profile-editor', handler as EventListener);
   }, []);
 
   // Handle click speed boost during transitions
@@ -336,6 +345,13 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
       >
         {renderScreen()}
       </div>
+
+      {/* Global Profile Editor Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 z-[60]">
+          <ProfileEditor onClose={() => setShowProfileModal(false)} />
+        </div>
+      )}
     </>
   );
 };

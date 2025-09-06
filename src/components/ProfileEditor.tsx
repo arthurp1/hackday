@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Save, User, MapPin, Linkedin, Twitter, Briefcase, FileText } from 'lucide-react';
+import { Save, User, MapPin, Linkedin, Twitter, FileText } from 'lucide-react';
 import { useHackathon } from '../contexts/HackathonContext';
 import TagInput from './TagInput';
 
@@ -51,9 +51,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ onClose, isInline = false
     }
   };
 
-  const handleProjectsChange = (projects: string[]) => {
-    setProfile(prev => ({ ...prev, otherProjects: projects }));
-  };
+  // Removed: handleProjectsChange for deprecated 'Add Tags' section
 
   if (!currentUser) return null;
 
@@ -75,6 +73,12 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ onClose, isInline = false
               ×
             </button>
           )}
+        </div>
+      )}
+      {isInline && (
+        <div className="flex items-center gap-2 mb-2">
+          <User className="w-4 h-4 text-cyan-400" />
+          <h3 className="text-sm font-semibold text-white">Edit Profile</h3>
         </div>
       )}
 
@@ -159,18 +163,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ onClose, isInline = false
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            <Briefcase className="w-4 h-4 inline mr-2" />
-            Add Tags
-          </label>
-          <TagInput
-            tags={profile.otherProjects || []}
-            onChange={handleProjectsChange}
-            placeholder="Add tags..."
-            suggestions={['E-commerce Platform', 'Mobile App', 'SaaS Tool', 'Open Source Library', 'AI Chatbot', 'Data Dashboard']}
-          />
-        </div>
+        {/* Removed 'Add Tags' section per request */}
 
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">

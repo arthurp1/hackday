@@ -18,6 +18,13 @@ export interface Prize {
   details: string;
 }
 
+// FAQ
+export interface FaqItem {
+  id: string;
+  question: string;
+  answer: string;
+}
+
 export interface Goodie {
   id: string;
   sponsorId: string;
@@ -74,6 +81,7 @@ export interface Project {
   demoUrl?: string;
   videoDemo?: string;
   slides?: string;
+  githubUrl?: string;
   challengesEnrolled: ChallengeType[];
   bountyId?: string;
   submittedAt?: Date;
@@ -138,6 +146,7 @@ interface HackathonState {
   bounties: Bounty[];
   goodies: Goodie[];
   attendees: Attendee[];
+  faq?: FaqItem[];
   phase?: { votingOpen: boolean; announce: boolean };
   winners?: { challenge: Partial<Record<ChallengeType, string>>; bounty: Record<string, string> };
   loading: boolean;
@@ -167,6 +176,9 @@ type HackathonAction =
   | { type: 'ADD_ATTENDEE'; payload: Attendee }
   | { type: 'UPDATE_ATTENDEE'; payload: { id: string; updates: Partial<Attendee> } }
   | { type: 'DELETE_ATTENDEE'; payload: string }
+  | { type: 'SET_FAQ'; payload: FaqItem[] }
+  | { type: 'UPSERT_FAQ'; payload: FaqItem }
+  | { type: 'DELETE_FAQ'; payload: string }
   | { type: 'SET_PHASE'; payload: { votingOpen: boolean; announce: boolean } }
   | { type: 'SET_WINNER_CHALLENGE'; payload: { type: ChallengeType; projectId: string } }
   | { type: 'SET_WINNER_BOUNTY'; payload: { bountyId: string; projectId: string } }
@@ -186,6 +198,7 @@ const reviveDates = (s: any): any => {
       ...a,
       registeredAt: a.registeredAt ? parseDate(a.registeredAt) : undefined,
     })),
+    faq: s.faq || [],
     phase: s.phase || { votingOpen: false, announce: false },
     winners: s.winners || { challenge: {}, bounty: {} },
   } as HackathonState;
@@ -291,6 +304,19 @@ const hackathonReducer = (state: HackathonState, action: HackathonAction): Hacka
     case 'SET_ATTENDEES':
       return { ...state, attendees: action.payload };
 
+    case 'SET_FAQ':
+      return { ...state, faq: action.payload };
+
+    case 'UPSERT_FAQ': {
+      const next = [...(state.faq || [])];
+      const idx = next.findIndex(f => f.id === action.payload.id);
+      if (idx >= 0) next[idx] = action.payload; else next.push(action.payload);
+      return { ...state, faq: next };
+    }
+
+    case 'DELETE_FAQ':
+      return { ...state, faq: (state.faq || []).filter(f => f.id !== action.payload) };
+
     case 'SET_PHASE':
       return { ...state, phase: action.payload };
 
@@ -386,6 +412,10 @@ interface HackathonContextType {
   setPhase: (next: { votingOpen: boolean; announce: boolean }) => Promise<{ success: boolean }>;
   pickChallengeWinner: (type: ChallengeType, projectId: string) => Promise<{ success: boolean }>;
   pickBountyWinner: (bountyId: string, projectId: string) => Promise<{ success: boolean }>;
+  // FAQ management
+  setFaq: (items: FaqItem[]) => Promise<{ success: boolean }>;
+  upsertFaqItem: (item: Omit<FaqItem, 'id'> & Partial<Pick<FaqItem, 'id'>>) => Promise<{ success: boolean; id: string }>;
+  deleteFaqItem: (id: string) => Promise<{ success: boolean }>;
 }
 
 const HackathonContext = createContext<HackathonContextType | undefined>(undefined);
@@ -442,14 +472,19 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // File-based persistence (JSON)
   const exportStateJson = (): string => {
+    // Exclude currentUser to keep auth local-only
     const payload = {
-      ...state,
-      // Convert Dates to ISO strings for JSON
       projects: state.projects.map(p => ({ ...p, submittedAt: p.submittedAt ? p.submittedAt.toISOString() : undefined })),
+      challenges: state.challenges,
+      bounties: state.bounties,
+      goodies: state.goodies,
       attendees: state.attendees.map(a => ({ ...a, registeredAt: a.registeredAt ? a.registeredAt.toISOString() : undefined })),
+      faq: state.faq || [],
       phase: state.phase || { votingOpen: false, announce: false },
       winners: state.winners || { challenge: {}, bounty: {} },
-    };
+      loading: false,
+      error: null,
+    } as const;
     return JSON.stringify(payload, null, 2);
   };
 
@@ -474,13 +509,13 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       const parsed = JSON.parse(json);
       const revived = reviveDates(parsed);
-      // Apply wholesale by dispatching sets
-      dispatch({ type: 'SET_CURRENT_USER', payload: revived.currentUser });
+      // Do not set currentUser from imports; auth is session/local-only
       dispatch({ type: 'SET_PROJECTS', payload: revived.projects });
       dispatch({ type: 'SET_CHALLENGES', payload: revived.challenges });
       dispatch({ type: 'SET_BOUNTIES', payload: revived.bounties });
       dispatch({ type: 'SET_GOODIES', payload: revived.goodies });
       dispatch({ type: 'SET_ATTENDEES', payload: revived.attendees });
+      dispatch({ type: 'SET_FAQ', payload: revived.faq || [] });
       dispatch({ type: 'SET_PHASE', payload: revived.phase });
       dispatch({ type: 'SET_WINNER_CHALLENGE', payload: { type: 'featherless', projectId: revived.winners?.challenge?.featherless } });
       dispatch({ type: 'SET_WINNER_CHALLENGE', payload: { type: 'activepieces', projectId: revived.winners?.challenge?.activepieces } });
@@ -952,6 +987,50 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
     return { success: true };
   };
 
+  // FAQ management
+  const setFaq = async (items: FaqItem[]): Promise<{ success: boolean }> => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      await new Promise(res => setTimeout(res, 200));
+      dispatch({ type: 'SET_FAQ', payload: items });
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return { success: true };
+    } catch (e) {
+      dispatch({ type: 'SET_ERROR', payload: 'Failed to set FAQ' });
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return { success: false };
+    }
+  };
+
+  const upsertFaqItem = async (item: Omit<FaqItem, 'id'> & Partial<Pick<FaqItem, 'id'>>): Promise<{ success: boolean; id: string }> => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      await new Promise(res => setTimeout(res, 200));
+      const id = item.id || `faq-${Date.now()}`;
+      dispatch({ type: 'UPSERT_FAQ', payload: { id, question: item.question, answer: item.answer } as FaqItem });
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return { success: true, id };
+    } catch (e) {
+      dispatch({ type: 'SET_ERROR', payload: 'Failed to upsert FAQ' });
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return { success: false, id: '' };
+    }
+  };
+
+  const deleteFaqItem = async (id: string): Promise<{ success: boolean }> => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      await new Promise(res => setTimeout(res, 200));
+      dispatch({ type: 'DELETE_FAQ', payload: id });
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return { success: true };
+    } catch (e) {
+      dispatch({ type: 'SET_ERROR', payload: 'Failed to delete FAQ' });
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return { success: false };
+    }
+  };
+
   const contextValue: HackathonContextType = {
     state,
     dispatch,
@@ -993,6 +1072,10 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
     setPhase,
     pickChallengeWinner,
     pickBountyWinner,
+    // FAQ
+    setFaq,
+    upsertFaqItem,
+    deleteFaqItem,
   };
 
   return (

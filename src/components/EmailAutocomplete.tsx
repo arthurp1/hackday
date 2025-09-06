@@ -7,21 +7,33 @@ interface EmailAutocompleteProps {
   onChange: (email: string) => void;
   placeholder?: string;
   className?: string;
+  autoFocus?: boolean;
 }
 
 const normalize = (s: string) => (s || '').toLowerCase();
 
-const EmailAutocomplete: React.FC<EmailAutocompleteProps> = ({ value, onChange, placeholder, className }) => {
+const EmailAutocomplete: React.FC<EmailAutocompleteProps> = ({ value, onChange, placeholder, className, autoFocus }) => {
   const { state } = useHackathon();
   const { attendees } = state;
   const [query, setQuery] = useState(value || '');
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setQuery(value || '');
   }, [value]);
+
+  useEffect(() => {
+    if (autoFocus) {
+      // Give React a tick to mount then focus
+      setTimeout(() => {
+        inputRef.current?.focus();
+        setOpen(true);
+      }, 0);
+    }
+  }, [autoFocus]);
 
   const suggestions = useMemo(() => {
     const q = normalize(query).trim();
@@ -97,6 +109,7 @@ const EmailAutocomplete: React.FC<EmailAutocompleteProps> = ({ value, onChange, 
       <div className="flex items-center gap-2">
         <input
           type="text"
+          ref={inputRef}
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); setActiveIndex(0); }}
           onFocus={() => setOpen(true)}

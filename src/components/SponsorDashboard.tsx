@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, Trophy, Plus, Edit3, Eye, Gift, Zap, User, Download, Users, FileText, ExternalLink, Video } from 'lucide-react';
+import { Building2, Trophy, Plus, Edit3, Eye, Gift, User, Target } from 'lucide-react';
 import { useHackathon } from '../contexts/HackathonContext';
 import BountyEditor from './BountyEditor';
 import ChallengeEditor from './ChallengeEditor';
@@ -21,7 +21,7 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
   uiState
 }) => {
   const { state } = useHackathon();
-  const { currentUser, bounties, challenges, goodies, projects, attendees } = state;
+  const { currentUser, bounties, challenges, goodies, projects } = state;
   const [activeTab, setActiveTab] = useState<'overview' | 'challenges' | 'bounties' | 'goodies'>(
     hostDashboardData?.activeTab || 'overview'
   );
@@ -36,76 +36,7 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
   
   // Stats removed as counters are no longer displayed
 
-  // CSV Export Functions
-  const exportAttendeesCSV = () => {
-    const myProjectIds = projects
-      .filter(p => p.challengesEnrolled.some(c => myChallenges.some(mc => mc.type === c)) || 
-                   myBounties.some(b => b.id === p.bountyId))
-      .map(p => p.id);
-    
-    const relevantAttendees = attendees.filter(a => 
-      a.projectId && myProjectIds.includes(a.projectId)
-    );
-    
-    const csvContent = [
-      ['Name', 'Email', 'Project', 'Team', 'Skills', 'City', 'LinkedIn', 'Checked In'].join(','),
-      ...relevantAttendees.map(a => {
-        const project = projects.find(p => p.id === a.projectId);
-        return [
-          `"${a.firstName} ${a.lastName}"`,
-          a.email,
-          `"${project?.name || 'N/A'}"`,
-          `"${a.team || 'N/A'}"`,
-          `"${a.skills.join('; ')}"`,
-          `"${a.profile?.city || 'N/A'}"`,
-          `"${a.profile?.linkedin || 'N/A'}"`,
-          a.checkedIn ? 'Yes' : 'No'
-        ].join(',');
-      })
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentUser?.name || 'sponsor'}-attendees.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const exportProjectsCSV = () => {
-    const myProjects = projects.filter(p => 
-      p.challengesEnrolled.some(c => myChallenges.some(mc => mc.type === c)) || 
-      myBounties.some(b => b.id === p.bountyId)
-    );
-    
-    const csvContent = [
-      ['Project Name', 'Team Name', 'Status', 'Challenges', 'Bounty', 'Team Members', 'Demo URL', 'Tags'].join(','),
-      ...myProjects.map(p => {
-        const bounty = myBounties.find(b => b.id === p.bountyId);
-        const projectAttendees = attendees.filter(a => a.projectId === p.id);
-        return [
-          `"${p.name}"`,
-          `"${p.teamName || 'N/A'}"`,
-          p.status,
-          `"${p.challengesEnrolled.join('; ')}"`,
-          `"${bounty?.title || 'N/A'}"`,
-          `"${projectAttendees.map(a => `${a.firstName} ${a.lastName}`).join('; ')}"`,
-          `"${p.demoUrl || 'N/A'}"`,
-          `"${p.tags?.join('; ') || 'N/A'}"`
-        ].join(',');
-      })
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentUser?.name || 'sponsor'}-projects.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-  const handleTabChange = (tab: 'overview' | 'bounties') => {
+  const handleTabChange = (tab: 'overview' | 'challenges' | 'bounties' | 'goodies') => {
     setActiveTab(tab);
     setHostDashboardData({ ...hostDashboardData, activeTab: tab });
   };
@@ -121,34 +52,7 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
     setHostDashboardData({ ...hostDashboardData, editingItem: null });
   };
 
-  const canVoteNow = () => {
-    try {
-      const flag = localStorage.getItem('phase-voting-open') === 'true';
-      const now = new Date();
-      return flag || now.getHours() >= 18; // allow after 18:00 local time
-    } catch {
-      return false;
-    }
-  };
-
-  const hasVoted = (projectId: string) => {
-    const voter = currentUser?.email || currentUser?.id || 'anon';
-    return localStorage.getItem(`vote-${projectId}-${voter}`) === 'true';
-  };
-
-  const toggleVote = (projectId: string) => {
-    const voter = currentUser?.email || currentUser?.id || 'anon';
-    const key = `vote-${projectId}-${voter}`;
-    const isVoted = localStorage.getItem(key) === 'true';
-    localStorage.setItem(key, (!isVoted).toString());
-  };
-
-  const getWinnerProject = () => localStorage.getItem('winner-project');
-  const pickWinner = (projectId: string) => {
-    localStorage.setItem('winner-project', projectId);
-    // Ensure winner phase is active so the banner/button appears
-    localStorage.setItem('phase-announce', 'true');
-  };
+  // Removed unused export and voting helper functions to reduce clutter
 
   const renderOverview = () => (
     <div className="space-y-6">
@@ -158,17 +62,6 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
 
   const renderChallenges = () => (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">My Challenges ({myChallenges.length})</h3>
-        <button
-          onClick={() => handleEditItem('challenge', 'new')}
-          className="flex items-center gap-2 px-3 py-2 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 hover:bg-cyan-500/30 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Create Challenge
-        </button>
-      </div>
-      
       {editingItem?.type === 'challenge' && (
         <div className="p-4 bg-black/40 rounded-lg border border-cyan-500/30">
           <ChallengeEditor 
@@ -181,7 +74,14 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
         </div>
       )}
       
-      <div className="space-y-3">
+      {myChallenges.length === 0 ? (
+        <div className="p-6 bg-black/30 rounded-lg border border-white/10 text-gray-300">
+          <p className="text-sm">
+            A <span className="text-cyan-300">challenge</span> is a one-day competition with <span className="text-white">prizes</span>, clear <span className="text-white">requirements</span>, and a selected <span className="text-white">winner</span>.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
         {myChallenges.map(challenge => (
           <div key={challenge.id} className="p-4 bg-black/20 rounded-lg border border-white/10">
             <div className="flex items-start justify-between">
@@ -227,23 +127,13 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 
   const renderBounties = () => (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">My Bounties ({myBounties.length})</h3>
-        <button
-          onClick={() => handleEditItem('bounty', 'new')}
-          className="flex items-center gap-2 px-3 py-2 bg-purple-500/20 border border-purple-500/30 rounded-lg text-purple-400 hover:bg-purple-500/30 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Create Bounty
-        </button>
-      </div>
-      
       {editingItem?.type === 'bounty' && (
         <div className="p-4 bg-black/40 rounded-lg border border-purple-500/30">
           <BountyEditor 
@@ -256,7 +146,14 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
         </div>
       )}
       
-      <div className="space-y-3">
+      {myBounties.length === 0 ? (
+        <div className="p-6 bg-black/30 rounded-lg border border-white/10 text-gray-300">
+          <p className="text-sm">
+            <span className="text-purple-300">Bounties</span> let you get help with specific GitHub issues or features. Only <span className="text-white">one team</span> can claim a bounty.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
         {myBounties.map(bounty => (
           <div key={bounty.id} className="p-4 bg-black/20 rounded-lg border border-white/10">
             <div className="flex items-start justify-between">
@@ -314,23 +211,13 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 
   const renderGoodies = () => (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">My Goodies ({myGoodies.length})</h3>
-        <button
-          onClick={() => handleEditItem('goodie', 'new')}
-          className="flex items-center gap-2 px-3 py-2 bg-pink-500/20 border border-pink-500/30 rounded-lg text-pink-400 hover:bg-pink-500/30 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Create Goodie
-        </button>
-      </div>
-      
       {editingItem?.type === 'goodie' && (
         <div className="p-4 bg-black/40 rounded-lg border border-pink-500/30">
           <GoodieEditor 
@@ -343,7 +230,14 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
         </div>
       )}
       
-      <div className="space-y-3">
+      {myGoodies.length === 0 ? (
+        <div className="p-6 bg-black/30 rounded-lg border border-white/10 text-gray-300">
+          <p className="text-sm">
+            A <span className="text-pink-300">goodie</span> is available for <span className="text-white">all hackday participants</span> — think swag, coupons, or free trials.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
         {myGoodies.map(goodie => (
           <div key={goodie.id} className="p-4 bg-black/20 rounded-lg border border-white/10">
             <div className="flex items-start justify-between">
@@ -378,7 +272,8 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 
@@ -421,11 +316,12 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
         </div>
       </div>
 
-      <div className="flex gap-1 mb-6">
+      <div className="flex items-center justify-between mb-6 gap-3">
+        <div className="flex gap-1">
         {[
-          { key: 'overview', label: 'Overview', icon: Building2 },
-          { key: 'challenges', label: 'Challenges', icon: Zap },
-          { key: 'bounties', label: 'Bounties', icon: Trophy },
+          { key: 'overview', label: 'Enrollments', icon: Building2 },
+          { key: 'challenges', label: 'Challenges', icon: Trophy },
+          { key: 'bounties', label: 'Bounties', icon: Target },
           { key: 'goodies', label: 'Goodies', icon: Gift }
         ].map(({ key, label, icon: Icon }) => (
           <button
@@ -441,6 +337,36 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
             {label}
           </button>
         ))}
+        </div>
+        <div className="flex items-center gap-2">
+          {activeTab === 'challenges' && (
+            <button
+              onClick={() => handleEditItem('challenge', 'new')}
+              className="flex items-center gap-2 px-3 py-2 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 hover:bg-cyan-500/30 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Create Challenge
+            </button>
+          )}
+          {activeTab === 'bounties' && (
+            <button
+              onClick={() => handleEditItem('bounty', 'new')}
+              className="flex items-center gap-2 px-3 py-2 bg-purple-500/20 border border-purple-500/30 rounded-lg text-purple-400 hover:bg-purple-500/30 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Create Bounty
+            </button>
+          )}
+          {activeTab === 'goodies' && (
+            <button
+              onClick={() => handleEditItem('goodie', 'new')}
+              className="flex items-center gap-2 px-3 py-2 bg-pink-500/20 border border-pink-500/30 rounded-lg text-pink-400 hover:bg-pink-500/30 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Create Goodie
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">

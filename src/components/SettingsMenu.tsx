@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Settings, LogOut, Zap, ZapOff, User, Shield, Clock } from 'lucide-react';
+import { LogOut, Zap, ZapOff } from 'lucide-react';
 import { useHackathon } from '../contexts/HackathonContext';
 
 interface SettingsMenuProps {
@@ -14,7 +14,7 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
   onLogout
 }) => {
   const { state, logout, downloadStateJson, setPhase } = useHackathon();
-  const { currentUser, phase } = state as any;
+  const { currentUser, phase, attendees } = state as any;
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -115,57 +115,46 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
 
   const nextEvent = getNextEvent();
 
+  // Derive first name and role for header pill
+  const attendeeRecord = attendees?.find((a: any) => a.email === currentUser?.email);
+  const firstName = attendeeRecord?.firstName || (currentUser?.name?.split(' ')[0] || 'User');
+  const roleLabel = (currentUser?.type || 'hacker');
+
+  const openProfileEditor = () => {
+    try {
+      window.dispatchEvent(new Event('open-profile-editor'));
+    } catch {}
+  };
+
   return (
-    <div className="fixed top-4 right-4 z-50" ref={menuRef}>
-      {/* Settings Dot Button */}
+    <div
+      className="fixed top-4 right-4 z-50"
+      ref={menuRef}
+      onMouseEnter={() => setIsOpen(true)}
+      onMouseLeave={() => setIsOpen(false)}
+    >
+      {/* Settings Trigger: Avatar + FirstName + Role */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-          isOpen 
-            ? 'bg-cyan-500/30 border-2 border-cyan-400/50' 
-            : 'bg-black/50 border-2 border-cyan-500/20 hover:border-cyan-400/40'
-        } backdrop-blur-md`}
+        onClick={openProfileEditor}
+        className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-300 border backdrop-blur-md ${
+          isOpen ? 'bg-cyan-500/20 border-cyan-400/40' : 'bg-black/50 border-cyan-500/20 hover:border-cyan-400/40'
+        }`}
+        title="Edit Profile"
       >
-        <div className={`w-3 h-3 rounded-full transition-all duration-300 ${
-          isOpen ? 'bg-cyan-400' : 'bg-cyan-500/70'
-        }`} />
+        <div className="w-6 h-6 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+          {firstName.slice(0,1).toUpperCase()}
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-white text-sm font-medium">{firstName}</span>
+          <span className="text-cyan-300 text-xs capitalize">{roleLabel}</span>
+        </div>
       </button>
 
       {/* Settings Menu */}
       {isOpen && (
         <div className="absolute top-12 right-0 w-80 bg-black/90 backdrop-blur-xl border border-cyan-500/30 rounded-lg shadow-2xl overflow-hidden">
 
-          {/* Schedule */}
-          <div className="p-3 border-b border-cyan-500/20 bg-black/30">
-            <div className="text-xs text-cyan-400 font-semibold mb-2">FULL SCHEDULE</div>
-            <div className="space-y-1">
-              {schedule.map((item, index) => (
-                <div key={index} className="flex items-center gap-2 text-xs">
-                  <span className="text-gray-400 w-10">{item.time}</span>
-                  <span className="text-gray-300">{item.emoji} {item.event}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* User Info */}
-          <div className="p-4 border-b border-cyan-500/20">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full flex items-center justify-center">
-                {currentUser.type === 'host' ? (
-                  <Shield className="w-4 h-4 text-white" />
-                ) : currentUser.type === 'sponsor' ? (
-                  <Settings className="w-4 h-4 text-white" />
-                ) : (
-                  <User className="w-4 h-4 text-white" />
-                )}
-              </div>
-              <div>
-                <div className="text-white font-medium text-sm">{currentUser.name}</div>
-                <div className="text-cyan-400 text-xs capitalize">{currentUser.type}</div>
-              </div>
-            </div>
-          </div>
+          {/* User Info removed per request */}
 
           {/* Settings Options */}
           <div className="p-2">
