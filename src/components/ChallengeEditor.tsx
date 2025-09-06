@@ -186,6 +186,20 @@ const ChallengeEditor: React.FC<ChallengeEditorProps> = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
+            <Link className="w-4 h-4 inline mr-2" />
+            Get Started URL (instructions / signup)
+          </label>
+          <input
+            type="url"
+            value={challenge.getStartedUrl || ''}
+            onChange={(e) => setChallenge(prev => ({ ...prev, getStartedUrl: e.target.value }))}
+            className="w-full px-4 py-3 bg-black/30 border border-purple-500/30 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:outline-none"
+            placeholder="https://your-docs-or-signup.example.com"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Requirements
           </label>
           <div className="space-y-2">

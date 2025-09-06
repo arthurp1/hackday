@@ -59,7 +59,7 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
       }
     })();
     return (
-      <div key={project.id} className="p-3 bg-black/20 rounded-lg border border-white/10">
+      <div key={project.id} className="">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             {/* No title repeat here; just description and metadata */}
@@ -75,7 +75,7 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
               Prizes enrolled: <span className="text-gray-200" title={(project.challengesEnrolled || []).join(', ')}>{prizeCount}</span>
             </div>
             {startedLabel && (
-              <div className="text-xs text-gray-400 mb-2">Started from: <span className="text-gray-200">{startedLabel}</span></div>
+              <div className="text-xs text-gray-400 mb-2">Started: <span className="text-gray-200">{startedLabel}</span></div>
             )}
             <div className="mb-2 text-xs text-gray-300">
               <span className="text-gray-400">Team:</span>{' '}
@@ -153,15 +153,7 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
                     </div>
                     {/* Description removed per request */}
                   </div>
-                  {(() => {
-                    const winnerId = getWinnerForChallenge(ch.type);
-                    const winnerProject = (projects as Project[]).find((p: Project) => p.id === winnerId);
-                    return winnerProject ? (
-                      <div className="text-xs text-yellow-300 px-2 py-1 border border-yellow-500/30 rounded">
-                         {winnerProject.name}
-                      </div>
-                    ) : null;
-                  })()}
+
                 </div>
                 <div className="space-y-2 mt-3">
                   {enrolledProjects.length === 0 && (
@@ -169,59 +161,30 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
                   )}
                   {(enrolledProjects as Project[]).map((p: Project) => (
                     <div key={p.id}>
-                      <button
-                        onClick={() => setOpenProjectId(id => id === p.id ? null : p.id)}
-                        className="w-full text-left"
-                      >
-                        <div className="group flex items-center justify-between px-2 py-2 hover:bg-white/5 rounded border-b border-white/10">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-white font-medium">{p.name}</span>
-                              {p.startedFrom && (
-                                <span className="px-2 py-0.5 bg-white/5 text-gray-300 rounded-full text-2xs">
-                                  {p.startedFrom === 'company' ? "It's my company" : p.startedFrom === 'some_code' ? 'Some code existed' : p.startedFrom === 'idea' ? 'Idea existed' : 'From scratch'}
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-1 text-[11px] text-gray-300 flex flex-wrap gap-2">
-                              {getProjectTeam(p.id).map((m: Attendee, idx: number) => (
-                                <span key={m.id || idx} className="inline-flex items-center gap-1 mr-2">
-                                  <span className="text-blue-300">{m.firstName} {m.lastName}</span>
-                                  {m.profile?.city && (
-                                    <span className="inline-flex items-center gap-1 text-gray-400">
-                                      <MapPin className="w-3 h-3" /> {m.profile.city}
-                                    </span>
-                                  )}
-                                  {m.profile?.linkedin && (
-                                    <a href={m.profile.linkedin} target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300" title="LinkedIn">
-                                      <Linkedin className="w-3 h-3" />
-                                    </a>
-                                  )}
-                                </span>
-                              ))}
-                            </div>
+                      <div className="group flex items-center justify-between py-2 rounded border-b border-white/10">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-medium">{p.name}</span>
                           </div>
-                          {mode === 'sponsor' && currentUser?.id === ch.sponsorId && !showWinnersOnly && (
-                            (() => {
-                              const isActive = getWinnerForChallenge(ch.type) === p.id;
-                              return (
-                                <button
-                                  onClick={(e) => { e.preventDefault(); setWinnerForChallenge(p.id, ch.type); }}
-                                  className={`${isActive ? '' : 'opacity-0 group-hover:opacity-100'} transition-opacity px-2 py-1 rounded text-xs border ${isActive ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}`}
-                                  title={isActive ? 'Winner Selected' : 'Winner'}
-                                >
-                                  Winner
-                                </button>
-                              );
-                            })()
-                          )}
                         </div>
-                      </button>
-                      {openProjectId === p.id && (
-                        <div className="mt-2">
-                          {projectCard(p)}
-                        </div>
-                      )}
+                        {mode === 'sponsor' && currentUser?.id === ch.sponsorId && !showWinnersOnly && (
+                          (() => {
+                            const isActive = getWinnerForChallenge(ch.type) === p.id;
+                            return (
+                              <button
+                                onClick={(e) => { e.preventDefault(); setWinnerForChallenge(p.id, ch.type); }}
+                                className={`${isActive ? '' : 'opacity-0 group-hover:opacity-100'} transition-opacity px-2 py-1 rounded text-xs border ${isActive ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}`}
+                                title={isActive ? 'Winner Selected' : 'Winner'}
+                              >
+                                Winner
+                              </button>
+                            );
+                          })()
+                        )}
+                      </div>
+                      <div className="mt-2">
+                        {projectCard(p)}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -264,7 +227,7 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
                     const winnerProject = (projects as Project[]).find((p: Project) => p.id === winnerId);
                     return winnerProject ? (
                       <div className="text-xs text-yellow-300 px-2 py-1 border border-yellow-500/30 rounded">
-                        Winner Selected: {winnerProject.name}
+                        {winnerProject.name}
                       </div>
                     ) : null;
                   })()}
@@ -272,62 +235,33 @@ const Enrollment: React.FC<EnrollmentProps> = ({ mode, showWinnersOnly = false }
                 <div className="space-y-2">
                   {(bountyProjects as Project[]).map((p: Project) => (
                     <div key={p.id}>
-                      <button
-                        onClick={() => setOpenProjectId(id => id === p.id ? null : p.id)}
-                        className="w-full text-left"
-                      >
-                        <div className="flex items-center justify-between px-2 py-2 hover:bg-white/5 rounded border-b border-white/10">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-white font-medium">{p.name}</span>
-                              {getWinnerForBounty(b.id) === p.id && (
-                                <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-300 rounded-full text-2xs">Winner</span>
-                              )}
-                              {p.startedFrom && (
-                                <span className="px-2 py-0.5 bg-white/5 text-gray-300 rounded-full text-2xs">
-                                  {p.startedFrom === 'company' ? "It's my company" : p.startedFrom === 'some_code' ? 'Some code existed' : p.startedFrom === 'idea' ? 'Idea existed' : 'From scratch'}
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-1 text-[11px] text-gray-300 flex flex-wrap gap-2">
-                              {getProjectTeam(p.id).map(m => (
-                                <span key={m.id} className="inline-flex items-center gap-1 mr-2">
-                                  <span className="text-blue-300">{m.firstName} {m.lastName}</span>
-                                  {m.profile?.city && (
-                                    <span className="inline-flex items-center gap-1 text-gray-400">
-                                      <MapPin className="w-3 h-3" /> {m.profile.city}
-                                    </span>
-                                  )}
-                                  {m.profile?.linkedin && (
-                                    <a href={m.profile.linkedin} target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300" title="LinkedIn">
-                                      <Linkedin className="w-3 h-3" />
-                                    </a>
-                                  )}
-                                </span>
-                              ))}
-                            </div>
+                      <div className="flex items-center justify-between px-2 py-2 hover:bg-white/5 rounded border-b border-white/10">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-medium">{p.name}</span>
+                            {getWinnerForBounty(b.id) === p.id && (
+                              <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-300 rounded-full text-2xs">Winner</span>
+                            )}
                           </div>
-                          {mode === 'sponsor' && currentUser?.id === b.sponsorId && !showWinnersOnly && (
-                            (() => {
-                              const isActive = getWinnerForBounty(b.id) === p.id;
-                              return (
-                                <button
-                                  onClick={(e) => { e.preventDefault(); setWinnerForBounty(p.id, b.id); }}
-                                  className={`${isActive ? '' : 'opacity-0 group-hover:opacity-100'} transition-opacity px-2 py-1 rounded text-xs border ${isActive ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}`}
-                                  title={isActive ? 'Winner Selected' : 'Winner'}
-                                >
-                                  Winner
-                                </button>
-                              );
-                            })()
-                          )}
                         </div>
-                      </button>
-                      {openProjectId === p.id && (
-                        <div className="mt-2">
-                          {projectCard(p)}
-                        </div>
-                      )}
+                        {mode === 'sponsor' && currentUser?.id === b.sponsorId && !showWinnersOnly && (
+                          (() => {
+                            const isActive = getWinnerForBounty(b.id) === p.id;
+                            return (
+                              <button
+                                onClick={(e) => { e.preventDefault(); setWinnerForBounty(p.id, b.id); }}
+                                className={`${isActive ? '' : 'opacity-0 group-hover:opacity-100'} transition-opacity px-2 py-1 rounded text-xs border ${isActive ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}`}
+                                title={isActive ? 'Winner Selected' : 'Winner'}
+                              >
+                                Winner
+                              </button>
+                            );
+                          })()
+                        )}
+                      </div>
+                      <div className="mt-2">
+                        {projectCard(p)}
+                      </div>
                     </div>
                   ))}
                 </div>

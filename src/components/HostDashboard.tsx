@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Trophy, Settings, CheckCircle, Clock, AlertCircle, Plus, Building2, User, MapPin, Linkedin, ExternalLink, Video, FileText, Trash } from 'lucide-react';
+import { Users, Trophy, Settings, AlertCircle, Plus, Building2, User, MapPin, ExternalLink, Video, FileText, Trash } from 'lucide-react';
 import { useHackathon, TeamStatus } from '../contexts/HackathonContext';
 import ProfileEditor from './ProfileEditor';
 import EmailAutocomplete from './EmailAutocomplete';
@@ -31,11 +31,10 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
 
   // Calculate statistics
   const stats = {
-    totalProjects: projects.length,
-    submittedProjects: projects.filter(p => p.status === 'submitted').length,
-    totalAttendees: hackerAttendees.length,
-    checkedInAttendees: hackerAttendees.filter(a => a.checkedIn).length,
-    soloAttendees: hackerAttendees.filter(a => !a.projectId).length,
+    total: hackerAttendees.length,
+    checkedIn: hackerAttendees.filter(a => a.checkedIn).length,
+    looking: hackerAttendees.filter(a => a.teamStatus === 'needsTeam').length,
+    haveProject: hackerAttendees.filter(a => !!a.projectId).length,
     challengeEnrollments: {
       featherless: projects.filter(p => p.challengesEnrolled.includes('featherless')).length,
       activepieces: projects.filter(p => p.challengesEnrolled.includes('activepieces')).length,
@@ -78,21 +77,11 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
     <div className="space-y-6">
       {/* Key Metrics */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="p-4 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-lg border border-cyan-500/20">
-          <div className="flex items-center gap-3">
-            <Trophy className="w-6 h-6 text-cyan-400" />
-            <div>
-              <div className="text-xl font-bold text-white">{stats.submittedProjects}/{stats.totalProjects}</div>
-              <div className="text-sm text-cyan-400">Projects Submitted</div>
-            </div>
-          </div>
-        </div>
-        
         <div className="p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/20">
           <div className="flex items-center gap-3">
             <Users className="w-6 h-6 text-green-400" />
             <div>
-              <div className="text-xl font-bold text-white">{stats.checkedInAttendees}/{stats.totalAttendees}</div>
+              <div className="text-xl font-bold text-white">{stats.checkedIn}/{stats.total}</div>
               <div className="text-sm text-green-400">Attendees Checked In</div>
             </div>
           </div>
@@ -102,8 +91,8 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
           <div className="flex items-center gap-3">
             <AlertCircle className="w-6 h-6 text-purple-400" />
             <div>
-              <div className="text-xl font-bold text-white">{stats.soloAttendees}</div>
-              <div className="text-sm text-purple-400">Solo Attendees</div>
+              <div className="text-xl font-bold text-white">{stats.looking}/{stats.total}</div>
+              <div className="text-sm text-purple-400">Looking for a team</div>
             </div>
           </div>
         </div>
@@ -112,10 +101,8 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
           <div className="flex items-center gap-3">
             <Trophy className="w-6 h-6 text-yellow-400" />
             <div>
-              <div className="text-xl font-bold text-white">
-                {stats.totalProjects > 0 ? Math.round((stats.submittedProjects / stats.totalProjects) * 100) : 0}%
-              </div>
-              <div className="text-sm text-yellow-400">Submission Rate</div>
+              <div className="text-xl font-bold text-white">{projects.length}</div>
+              <div className="text-sm text-yellow-400">Total Projects</div>
             </div>
           </div>
         </div>
@@ -170,7 +157,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
           </thead>
           <tbody>
             {projects.map(project => (
-              <tr key={project.id} className="border-b border-white/5 hover:bg-white/5">
+              <tr key={project.id} className="group border-b border-white/5 hover:bg-white/5">
                 <td className="p-3">
                   <div className="text-white">{project.name}</div>
                   {project.tags && project.tags.length > 0 && (
@@ -184,36 +171,29 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
                   )}
                 </td>
                 <td className="p-3">
-                  <div className="text-xs text-gray-400 mb-1">{project.teamName || '—'}</div>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    {hackerAttendees
-                      .filter(a => a.projectId === project.id)
-                      .map(member => (
-                        <span key={member.id} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 rounded">
-                          <span className="text-blue-300">{member.firstName} {member.lastName}</span>
-                          {member.profile?.city && (
-                            <span className="inline-flex items-center gap-1 text-gray-400">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg>
-                              {member.profile.city}
-                            </span>
-                          )}
-                          {member.profile?.linkedin && (
-                            <a href={member.profile.linkedin} target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300" title="LinkedIn">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M19 0h-14c-2.76 0-5 2.24-5 5v14c0 2.76 2.24 5 5 5h14c2.76 0 5-2.24 5-5v-14c0-2.76-2.24-5-5-5zm-11 19h-3v-10h3v10zm-1.5-11.15c-.97 0-1.75-.79-1.75-1.75s.78-1.75 1.75-1.75 1.75.79 1.75 1.75-.79 1.75-1.75 1.75zm13.5 11.15h-3v-5.5c0-1.31-.02-3-1.83-3-1.83 0-2.11 1.43-2.11 2.91v5.59h-3v-10h2.88v1.37h.04c.4-.75 1.38-1.54 2.84-1.54 3.04 0 3.6 2 3.6 4.59v5.58z"/></svg>
-                            </a>
-                          )}
-                        </span>
-                      ))}
-                  </div>
+                  {(() => {
+                    const members = hackerAttendees.filter(a => a.projectId === project.id);
+                    const hasMembers = members.length > 0;
+                    return (
+                      <>
+                        <div className="text-xs text-gray-400 mb-1">{project.teamName || (hasMembers ? '' : '—')}</div>
+                        {hasMembers && (
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            {members.map(member => (
+                              <span key={member.id} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 rounded">
+                                <span className="text-blue-300">{member.firstName} {member.lastName}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </td>
                 <td className="p-3">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    project.status === 'submitted' ? 'bg-green-500/20 text-green-400' :
-                    project.status === 'draft' ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-gray-500/20 text-gray-400'
-                  }`}>
-                    {project.status}
-                  </span>
+                  {project.status === 'submitted' && (
+                    <span className="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">submitted</span>
+                  )}
                 </td>
                 <td className="p-3">
                   <div className="flex flex-wrap gap-1">
@@ -242,13 +222,22 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
                   </div>
                 </td>
                 <td className="p-3">
-                  <button
-                    onClick={() => handleDeleteProject(project.id)}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-red-500/20 border border-red-500/30 rounded text-red-300 hover:bg-red-500/30 text-xs"
-                    title="Delete project"
-                  >
-                    <Trash className="w-3 h-3" /> Delete
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => { setAssignProjectId(project.id); setShowAddTeamModal(true); }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center p-1 bg-blue-500/20 border border-blue-500/30 rounded text-blue-300 hover:bg-blue-500/30"
+                      title="Add member to project"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProject(project.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center p-1 bg-red-500/20 border border-red-500/30 rounded text-red-300 hover:bg-red-500/30"
+                      title="Delete project"
+                    >
+                      <Trash className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -276,8 +265,6 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
             <tr className="border-b border-white/10">
               <th className="text-left p-3 text-gray-300">Name</th>
               <th className="text-left p-3 text-gray-300">Project</th>
-              <th className="text-left p-3 text-gray-300">Checked In</th>
-              <th className="text-left p-3 text-gray-300">Skills</th>
               <th className="text-left p-3 text-gray-300">Actions</th>
             </tr>
           </thead>
@@ -292,65 +279,31 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
                       <span className="absolute top-full left-0 mt-1 hidden group-hover:block text-xs text-gray-300 bg-black/70 border border-white/10 rounded px-2 py-1">
                         {attendee.email}
                       </span>
-                      <span className="ml-2 inline-flex items-center gap-1 text-xs text-gray-400">
-                        {attendee.profile?.city && (
-                          <>
-                            <MapPin className="w-3 h-3" /> {attendee.profile.city}
-                          </>
-                        )}
-                        {attendee.profile?.linkedin && (
-                          <a href={attendee.profile.linkedin} target="_blank" rel="noreferrer" className="ml-2 text-cyan-400 hover:text-cyan-300" title="LinkedIn">
-                            <Linkedin className="w-3 h-3 inline" />
-                          </a>
-                        )}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    {project ? (
-                      <div className="text-white">{project.name}</div>
-                    ) : (
-                      <div className="text-gray-400 italic">No project</div>
-                    )}
-                  </td>
-                  <td className="p-3">
-                    {attendee.checkedIn ? (
-                      <CheckCircle className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <Clock className="w-4 h-4 text-yellow-400" />
-                    )}
-                  </td>
-                  <td className="p-3">
-                    <div className="flex flex-wrap gap-1">
-                      {(attendee.skills || []).slice(0, 3).map(skill => (
-                        <span key={skill} className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">
-                          {skill}
-                        </span>
-                      ))}
-                      {(attendee.skills?.length ?? 0) > 3 && (
-                        <span className="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs">
-                          +{(attendee.skills?.length ?? 0) - 3}
+                      {attendee.profile?.city && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-xs text-gray-400">
+                          <MapPin className="w-3 h-3" /> {attendee.profile.city}
                         </span>
                       )}
+                  </div>
+                  </td>
+                  <td className="p-3">
+                    <div className="flex items-center gap-2">
+                      {project ? (
+                        <div className="text-white">{project.name}</div>
+                      ) : (
+                        <div className="text-gray-400 italic">No project</div>
+                      )}
+                      <button
+                        onClick={() => { setAssignEmail(attendee.email); setAssignProjectId(project?.id || ''); setShowAddTeamModal(true); }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-xs bg-blue-500/20 border border-blue-500/30 rounded text-blue-300 hover:bg-blue-500/30"
+                        title="Add Project / Team"
+                      >
+                        Add
+                      </button>
                     </div>
                   </td>
                   <td className="p-3">
-                    {!attendee.teamStatus || attendee.teamStatus === 'needsTeam' ? (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleTeamStatusUpdate(attendee.id, 'solo')}
-                          className="px-3 py-1 bg-green-500/20 border border-green-500/30 rounded text-green-400 hover:bg-green-500/30 transition-colors text-xs"
-                        >
-                          Wants Solo
-                        </button>
-                        <button
-                          onClick={() => { setAssignEmail(attendee.email); setShowAddTeamModal(true); }}
-                          className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded text-blue-400 hover:bg-blue-500/30 transition-colors text-xs"
-                        >
-                          Add Team
-                        </button>
-                      </div>
-                    ) : attendee.teamStatus === 'hasTeam' && attendee.team ? (
+                    {attendee.teamStatus === 'hasTeam' && attendee.team ? (
                       <div className="flex items-center gap-2">
                         <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">
                           Team: {attendee.team}
@@ -363,7 +316,29 @@ const HostDashboard: React.FC<HostDashboardProps> = ({
                         </button>
                       </div>
                     ) : (
-                      <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">Solo Confirmed</span>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={async () => { await removeAttendeeFromTeam(attendee.id); await handleTeamStatusUpdate(attendee.id, 'solo'); }}
+                          className="px-2 py-1 bg-green-500/20 border border-green-500/30 rounded text-green-300 hover:bg-green-500/30 transition-colors text-xs"
+                          title="Set Prefers Solo"
+                        >
+                          Prefers Solo
+                        </button>
+                        <button
+                          onClick={() => handleTeamStatusUpdate(attendee.id, 'needsTeam')}
+                          className="px-2 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded text-yellow-300 hover:bg-yellow-500/30 transition-colors text-xs"
+                          title="Mark Looking for Team"
+                        >
+                          Looking for Team
+                        </button>
+                        <button
+                          onClick={() => { setAssignEmail(attendee.email); setAssignProjectId(attendee.projectId || ''); setShowAddTeamModal(true); }}
+                          className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded text-blue-400 hover:bg-blue-500/30 transition-colors text-xs"
+                          title="Add to Project/Team"
+                        >
+                          Add Team
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>

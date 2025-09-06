@@ -204,6 +204,19 @@ const GoodieEditor: React.FC<GoodieEditorProps> = ({
         </div>
 
         <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            URL (coupon / free trial / instructions)
+          </label>
+          <input
+            type="url"
+            value={goodie.url || ''}
+            onChange={(e) => setGoodie(prev => ({ ...prev, url: e.target.value }))}
+            className="w-full px-4 py-3 bg-black/30 border border-purple-500/30 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:outline-none"
+            placeholder="https://example.com/redeem"
+          />
+        </div>
+
+        <div>
           <label className="flex items-center gap-3">
             <input
               type="checkbox"

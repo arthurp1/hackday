@@ -87,6 +87,7 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
+                  <Trophy className="w-4 h-4 text-yellow-400" />
                   <h4 className="font-semibold text-white">{challenge.title}</h4>
                   <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-xs">
                     {challenge.type}
@@ -99,6 +100,18 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
                     {challenge.prizes.map(p => p.details).join(', ')}
                   </span>
                 </div>
+                {challenge.getStartedUrl && (
+                  <div className="mt-2">
+                    <a
+                      href={challenge.getStartedUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded text-cyan-300 hover:bg-cyan-500/30 text-xs"
+                    >
+                      Get Started
+                    </a>
+                  </div>
+                )}
                 <div className="text-sm mb-2">
                   <span className="text-gray-400">Enrolled Projects: </span>
                   <span className="text-cyan-400 font-medium">
@@ -159,6 +172,7 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
+                  <Target className="w-4 h-4 text-pink-400" />
                   <h4 className="font-semibold text-white">{bounty.title}</h4>
                   <span className={`px-2 py-1 rounded-full text-xs ${
                     bounty.status === 'open' ? 'bg-green-500/20 text-green-400' :
@@ -243,6 +257,7 @@ const SponsorDashboard: React.FC<SponsorDashboardProps> = ({
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
+                  <Gift className="w-4 h-4 text-pink-400" />
                   <h4 className="font-semibold text-white">{goodie.title}</h4>
                   <span className="px-2 py-1 bg-pink-500/20 text-pink-400 rounded-full text-xs capitalize">
                     {goodie.type.replace('_', ' ')}

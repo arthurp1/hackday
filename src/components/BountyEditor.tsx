@@ -34,13 +34,7 @@ const BountyEditor: React.FC<BountyEditorProps> = ({
     sponsorId: currentUser?.id || '',
     tags: [],
     maxTeams: 1,
-    claimedTeams: [],
-    projectTemplate: {
-      name: '',
-      description: '',
-      tags: [],
-      type: 'bounty'
-    }
+    claimedTeams: []
   });
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -114,15 +108,7 @@ const BountyEditor: React.FC<BountyEditorProps> = ({
     setBounty(prev => ({ ...prev, tags }));
   };
 
-  const handleTemplateChange = (field: string, value: any) => {
-    setBounty(prev => ({
-      ...prev,
-      projectTemplate: {
-        ...prev.projectTemplate,
-        [field]: value
-      }
-    }));
-  };
+  
 
   return (
     <div className={isInline ? "space-y-6" : "quiz-panel"}>
@@ -218,41 +204,7 @@ const BountyEditor: React.FC<BountyEditorProps> = ({
           </div>
         </div>
 
-        {/* Project Template */}
-        <div className="p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
-          <h4 className="text-purple-400 font-semibold mb-3">Project Template</h4>
-          <p className="text-sm text-gray-400 mb-3">
-            This template will be used when teams start working on this bounty
-          </p>
-          
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Template Project Name
-              </label>
-              <input
-                type="text"
-                value={bounty.projectTemplate?.name || ''}
-                onChange={(e) => handleTemplateChange('name', e.target.value)}
-                className="w-full px-3 py-2 bg-black/30 border border-purple-500/30 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:outline-none text-sm"
-                placeholder="Default project name for teams"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Template Description
-              </label>
-              <textarea
-                value={bounty.projectTemplate?.description || ''}
-                onChange={(e) => handleTemplateChange('description', e.target.value)}
-                className="w-full px-3 py-2 bg-black/30 border border-purple-500/30 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:outline-none text-sm"
-                placeholder="Default description for teams"
-                rows={2}
-              />
-            </div>
-          </div>
-        </div>
+        
 
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">

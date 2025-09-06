@@ -33,6 +33,7 @@ export interface Goodie {
   details: string;
   quantity?: number;
   forEveryone: boolean;
+  url?: string;
 }
 
 export interface User {
@@ -69,6 +70,7 @@ export interface Challenge {
   requirements: string[];
   sponsorId: string;
   tags?: string[];
+  getStartedUrl?: string;
 }
 
 export interface Project {
@@ -196,6 +198,10 @@ const reviveDates = (s: any): any => {
     attendees: (s.attendees || []).map((a: any) => ({
       ...a,
       registeredAt: a.registeredAt ? parseDate(a.registeredAt) : undefined,
+    })),
+    challenges: (s.challenges || []).map((c: any) => ({
+      ...c,
+      getStartedUrl: c.getStartedUrl || ((c.type === 'featherless') ? 'https://featherless.ai' : (c.type === 'activepieces') ? 'https://activepieces.com' : (c.type === 'aibuilders') ? 'https://aibuilders.club' : undefined)
     })),
     faq: s.faq || [],
     phase: s.phase || { votingOpen: false, announce: false },

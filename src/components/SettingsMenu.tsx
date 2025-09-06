@@ -28,20 +28,25 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Close menu when clicking outside
+  // Close menu when clicking outside or pressing Escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
 
@@ -130,12 +135,10 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
     <div
       className="fixed top-4 right-4 z-50"
       ref={menuRef}
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
     >
       {/* Settings Trigger: Avatar + FirstName + Role */}
       <button
-        onClick={openProfileEditor}
+        onClick={() => setIsOpen((v) => !v)}
         className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-300 border backdrop-blur-md ${
           isOpen ? 'bg-cyan-500/20 border-cyan-400/40' : 'bg-black/50 border-cyan-500/20 hover:border-cyan-400/40'
         }`}
@@ -158,47 +161,56 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
 
           {/* Settings Options */}
           <div className="p-2">
+            {/* Edit Profile */}
+            <button
+              onClick={() => { openProfileEditor(); setIsOpen(false); }}
+              className="w-full text-left px-3 py-2 text-sm text-white hover:bg-white/10 rounded mb-2"
+            >
+              Edit Profile
+            </button>
             {/* Public Debug Controls: Phase toggles */}
-            <div className="mb-2 p-2 rounded bg-black/40 border border-yellow-500/20">
-              <div className="text-xs text-yellow-300 mb-1">Debug: Phase Controls</div>
-                <div className="flex flex-col gap-1">
-                  <button
-                    onClick={() => downloadStateJson()}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-white/10 rounded"
-                  >
-                    Download State (JSON)
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const next = { votingOpen: !((phase && phase.votingOpen) || false), announce: !!(phase && phase.announce) };
-                      await setPhase(next);
-                      window.dispatchEvent(new Event('phase-updated'));
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm text-cyan-300 hover:bg-cyan-500/10 rounded"
-                  >
-                    {phase?.votingOpen ? 'Close Sponsor Voting' : 'Open Sponsor Voting'}
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const next = { votingOpen: !!(phase && phase.votingOpen), announce: !((phase && phase.announce) || false) };
-                      await setPhase(next);
-                      window.dispatchEvent(new Event('phase-updated'));
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm text-green-300 hover:bg-green-500/10 rounded"
-                  >
-                    {phase?.announce ? 'Unset Winner Announced' : 'Set Winner Announced'}
-                  </button>
-                  <button
-                    onClick={async () => {
-                      await setPhase({ votingOpen: false, announce: false });
-                      window.dispatchEvent(new Event('phase-updated'));
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm text-red-300 hover:bg-red-500/10 rounded"
-                  >
-                    Reset Phases (Editing/Normal)
-                  </button>
-                </div>
-            </div>
+            {currentUser?.type === 'host' && (
+              <div className="mb-2 p-2 rounded bg-black/40 border border-yellow-500/20 max-h-60 overflow-auto">
+                <div className="text-xs text-yellow-300 mb-1">Phase Controls</div>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => downloadStateJson()}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-white/10 rounded"
+                    >
+                      Download State (JSON)
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const next = { votingOpen: !((phase && phase.votingOpen) || false), announce: !!(phase && phase.announce) };
+                        await setPhase(next);
+                        window.dispatchEvent(new Event('phase-updated'));
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-cyan-300 hover:bg-cyan-500/10 rounded"
+                    >
+                      {phase?.votingOpen ? 'Close Sponsor Voting' : 'Open Sponsor Voting'}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const next = { votingOpen: !!(phase && phase.votingOpen), announce: !((phase && phase.announce) || false) };
+                        await setPhase(next);
+                        window.dispatchEvent(new Event('phase-updated'));
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-green-300 hover:bg-green-500/10 rounded"
+                    >
+                      {phase?.announce ? 'Unset Winner Announced' : 'Set Winner Announced'}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await setPhase({ votingOpen: false, announce: false });
+                        window.dispatchEvent(new Event('phase-updated'));
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-red-300 hover:bg-red-500/10 rounded"
+                    >
+                      Reset Phases (Editing/Normal)
+                    </button>
+                  </div>
+              </div>
+            )}
 
             {/* Portal Animations Toggle */}
             <button
@@ -233,7 +245,7 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
           {/* Footer */}
           <div className="px-4 py-2 border-t border-cyan-500/20 bg-black/50">
             <div className="text-xs text-gray-400">
-              Session auto-saves • Updates every minute
+              Made for the AI Hackday AMS - 7 Sept.
             </div>
           </div>
         </div>

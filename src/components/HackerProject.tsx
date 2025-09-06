@@ -318,12 +318,14 @@ const HackerProject: React.FC<HackerProjectProps> = ({
           <button
             key={key}
             onClick={() => handleTabChange(key)}
-            className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
               activeTab === key
                 ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                 : 'text-gray-400 hover:text-white hover:bg-white/5'
             }`}
           >
+            {key === 'challenges' && (<Trophy className="w-4 h-4 text-yellow-400" />)}
+            {key === 'goodies' && (<Gift className="w-4 h-4 text-pink-400" />)}
             {label}
           </button>
         ))}
@@ -726,13 +728,37 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                               )}
                             </div>
                             <p className="text-sm text-gray-300 mb-2">{challenge.description}</p>
-                            {challenge.tags && challenge.tags.length > 0 && (
-                              <div className="mb-2 flex flex-wrap gap-1">
-                                {challenge.tags.map((t, idx) => (
-                                  <span key={t+idx} className="px-2 py-0.5 rounded-full text-2xs border border-white/10 text-gray-300">{t}</span>
-                                ))}
-                              </div>
-                            )}
+                            {/* Type / provider chips (clickable) */}
+                            <div className="mb-2 flex flex-wrap gap-1 text-2xs">
+                              {/* Known provider shortcut */}
+                              {getSponsorWebsite(challenge.sponsorId) && (
+                                <a
+                                  href={getSponsorWebsite(challenge.sponsorId)!}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-2 py-0.5 rounded-full border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
+                                >
+                                  {new URL(getSponsorWebsite(challenge.sponsorId)!).hostname}
+                                </a>
+                              )}
+                              {challenge.tags && challenge.tags.length > 0 && challenge.tags.map((t, idx) => {
+                                const href = t.startsWith('http') ? t : (t.includes('activepieces') ? 'https://activepieces.com' : t.includes('aibuilders') ? 'https://aibuilders.club' : t.includes('featherless') ? 'https://featherless.ai' : undefined);
+                                return href ? (
+                                  <a key={t+idx} href={href} target="_blank" rel="noreferrer" className="px-2 py-0.5 rounded-full border border-white/10 text-gray-300 hover:bg-white/5">{t}</a>
+                                ) : (
+                                  <span key={t+idx} className="px-2 py-0.5 rounded-full border border-white/10 text-gray-300">{t}</span>
+                                );
+                              })}
+                            </div>
+                            {/* Prizes and enrollment info */}
+                            <div className="text-xs text-gray-300 mb-2">
+                              <span className="text-gray-400">Prizes: </span>
+                              <span className="text-green-400 font-medium">{(challenge.prizes || []).map(p => p.details).join(', ')}</span>
+                            </div>
+                            <div className="text-xs text-gray-300 mb-2">
+                              <span className="text-gray-400">Enrolled Projects: </span>
+                              <span className="text-cyan-400 font-medium">{state.projects.filter(p => (p.challengesEnrolled || []).includes(challenge.type)).length}</span>
+                            </div>
                             <div className="text-xs text-gray-300 space-y-1">
                               {challenge.requirements.map((req, idx) => (
                                 <div key={idx}>• {req}</div>
@@ -744,6 +770,18 @@ const HackerProject: React.FC<HackerProjectProps> = ({
                                       {p.currency}{p.amount} {p.details}
                                     </span>
                                   ))}
+                                </div>
+                              )}
+                              {challenge.getStartedUrl && (
+                                <div className="pt-1">
+                                  <a
+                                    href={challenge.getStartedUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded text-cyan-300 hover:bg-cyan-500/30"
+                                  >
+                                    Get Started
+                                  </a>
                                 </div>
                               )}
                             </div>
