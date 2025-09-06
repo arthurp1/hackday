@@ -51,15 +51,10 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
     const saved = localStorage.getItem('portal-animations-enabled');
     return saved !== null ? JSON.parse(saved) : true;
   });
+  // Show prize announcement entry only when hosts toggle Voting or Prize Awarded phase
   const computeShowWinners = () => !!(state.phase && (state.phase.votingOpen || state.phase.announce));
   const showWinners = computeShowWinners();
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const winnersPickedAll = () => {
-    const ch = state.challenges || [];
-    if (ch.length === 0) return false;
-    const map = (state.winners?.challenge || {}) as Record<string, string>;
-    return ch.every((c: any) => !!map[c.type]);
-  };
 
   // If logged in, never show Welcome/Signup/Login screens; force route to the correct home
   useEffect(() => {
@@ -314,8 +309,8 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
       setHostDashboardData,
       onNavigate: navigateToScreen,
       onLogin: handleLogin,
-      uiState
-    };
+      uiState,
+    } as any;
 
     switch (currentScreen) {
       case 'welcome':
@@ -326,29 +321,28 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
         return <SponsorLogin {...screenProps} />;
       case 'hackerSignup':
         return <HackerSignup {...screenProps} />;
-      
       case 'projectSetup':
         return <ProjectSetup {...screenProps} />;
       case 'hackerProject':
-        return <HackerProject {...screenProps} />;
+        return <HackerProject {...screenProps} onNavigate={(screen: string, data?: any) => navigateToScreen(screen, data, true)} />;
       case 'hostDashboard':
-        return <HostDashboard {...screenProps} onNavigate={(screen, data) => navigateToScreen(screen, data, true)} />;
+        return <HostDashboard {...screenProps} onNavigate={(screen: string, data?: any) => navigateToScreen(screen, data, true)} />;
       case 'sponsorDashboard':
-        return <SponsorDashboard {...screenProps} onNavigate={(screen, data) => navigateToScreen(screen, data, true)} />;
+        return <SponsorDashboard {...screenProps} onNavigate={(screen: string, data?: any) => navigateToScreen(screen, data, true)} />;
       case 'projectEditor':
-        return <ProjectEditor {...screenProps} onNavigate={(screen, data) => navigateToScreen(screen, data, true)} />;
-      case 'attendeeManager':
-        return <AttendeeManager {...screenProps} onNavigate={(screen, data) => navigateToScreen(screen, data, true)} />;
+        return <ProjectEditor {...screenProps} onNavigate={(screen: string, data?: any) => navigateToScreen(screen, data, true)} />;
       case 'bountyEditor':
-        return <BountyEditor {...screenProps} onNavigate={(screen, data) => navigateToScreen(screen, data, true)} />;
+        return <BountyEditor {...screenProps} onNavigate={(screen: string, data?: any) => navigateToScreen(screen, data, true)} />;
       case 'challengeEditor':
-        return <ChallengeEditor {...screenProps} onNavigate={(screen, data) => navigateToScreen(screen, data, true)} />;
+        return <ChallengeEditor {...screenProps} onNavigate={(screen: string, data?: any) => navigateToScreen(screen, data, true)} />;
       case 'goodieEditor':
-        return <GoodieEditor {...screenProps} onNavigate={(screen, data) => navigateToScreen(screen, data, true)} />;
+        return <GoodieEditor {...screenProps} onNavigate={(screen: string, data?: any) => navigateToScreen(screen, data, true)} />;
       case 'enrollReview':
-        return <EnrollReview {...screenProps} onNavigate={(screen, data) => navigateToScreen(screen, data, true)} />;
+        return <EnrollReview {...screenProps} onNavigate={(screen: string, data?: any) => navigateToScreen(screen, data, true)} />;
       case 'prizeAnnouncement':
-        return <PrizeAnnouncement {...screenProps} onNavigate={(screen, data) => navigateToScreen(screen, data, true)} />;
+        // Only render when Voting or Announce is enabled by hosts
+        if (!showWinners) return <WelcomeScreen {...screenProps} />;
+        return <PrizeAnnouncement {...screenProps} onNavigate={(screen: string, data?: any) => navigateToScreen(screen, data, true)} />;
       default:
         return <WelcomeScreen {...screenProps} />;
     }
@@ -367,16 +361,16 @@ const HackathonInterfaceContent: React.FC<HackathonInterfaceProps> = ({ onAccele
         onLogout={handleLogout}
       />
       
-      {/* Hide timer if winners are being announced */}
-      {!(state.phase?.announce) && (
-        <CountdownTimer />
-      )}
+      {/* Always show timer to avoid flicker */}
+      <CountdownTimer />
+
+      {/* Prize Announcement entry only if hosts enabled Voting or Announce */}
       {showWinners && (
         <button
           onClick={() => navigateToScreen('prizeAnnouncement', {}, true)}
           className="fixed top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2 bg-green-500/20 border border-green-500/40 text-green-300 rounded-lg backdrop-blur-md hover:bg-green-500/30 transition-colors"
         >
-          {state.phase?.announce ? 'Winners' : state.phase?.votingOpen ? 'Voting' : 'View Winners'}
+          {state.phase?.announce ? 'Winners' : 'Voting'}
         </button>
       )}
       

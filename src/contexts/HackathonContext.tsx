@@ -406,6 +406,8 @@ interface HackathonContextType {
   updateProject: (id: string, updates: Partial<Project>) => Promise<{ success: boolean }>;
   createProject: (project: Omit<Project, 'id'>) => Promise<{ success: boolean; id: string }>;
   deleteProject: (id: string) => Promise<{ success: boolean }>;
+  // Attendees
+  createAttendee: (attendee: Omit<Attendee, 'id' | 'registeredAt'> & { registeredAt?: Date }) => Promise<{ success: boolean; id: string }>;
   updateAttendee: (id: string, updates: Partial<Attendee>) => Promise<{ success: boolean }>;
   checkInAttendee: (email: string) => Promise<{ success: boolean }>;
   updateBounty: (id: string, updates: Partial<Bounty>) => Promise<{ success: boolean }>;
@@ -522,6 +524,40 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
       localStorage.removeItem('hackathon-session');
     } catch (error) {
       console.error('Failed to clear session:', error);
+    }
+  };
+
+  // Create attendee (used by self-registration flow)
+  const createAttendee = async (
+    attendee: Omit<Attendee, 'id' | 'registeredAt'> & { registeredAt?: Date }
+  ): Promise<{ success: boolean; id: string }> => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      await new Promise(resolve => setTimeout(resolve, 150));
+      const id = `att-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const a: Attendee = {
+        id,
+        name: attendee.name,
+        firstName: attendee.firstName,
+        lastName: attendee.lastName,
+        email: attendee.email,
+        checkedIn: attendee.checkedIn ?? false,
+        registeredAt: attendee.registeredAt || new Date(),
+        team: attendee.team,
+        projectId: attendee.projectId,
+        wantsSolo: attendee.wantsSolo,
+        sponsorId: attendee.sponsorId,
+        skills: attendee.skills || [],
+        teamStatus: attendee.teamStatus,
+        profile: attendee.profile,
+      };
+      dispatch({ type: 'ADD_ATTENDEE', payload: a });
+      return { success: true, id };
+    } catch (e) {
+      console.error('createAttendee failed', e);
+      return { success: false, id: '' };
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 
@@ -711,6 +747,274 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
       } catch {}
     }
   }, [state.currentUser]);
+
+  // URL-triggered migrations (run once when ?migrate=... is present).
+  // Supported keys:
+  // - append-attendees-2025-08-28
+  // - append-bounties-2025-09-06
+  React.useEffect(() => {
+    (async () => {
+      if (!hydrated) return;
+      let key: string | null = null;
+      try {
+        key = new URLSearchParams(window.location.search).get('migrate');
+      } catch {}
+      if (!key) return;
+
+      const consumeParam = () => {
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('migrate');
+          window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+        } catch {}
+      };
+
+      if (key === 'append-attendees-2025-08-28') {
+        const flag = 'migration-append-attendees-2025-08-28';
+        if (localStorage.getItem(flag) === 'done') { consumeParam(); return; }
+        const newOnes: Array<{ name: string; email: string; registeredAt?: string }> = [
+          { name: 'Nataliia Radina', email: 'shyianovska@gmail.com', registeredAt: '2025-08-28T17:07:24Z' },
+          { name: 'Manxia', email: 'hnulmx@gmail.com', registeredAt: '2025-08-28T17:10:10Z' },
+          { name: 'Lucas Zielstra', email: 'lzielstra2001@gmail.com', registeredAt: '2025-08-28T17:49:40Z' },
+          { name: 'Ward', email: 'wardleenders@gmail.com', registeredAt: '2025-08-28T19:00:22Z' },
+          { name: 'Bruno Pais', email: 'bruno.pais88@gmail.com' },
+        ];
+        const missing = newOnes.filter(n => !state.attendees.some(a => a.email.toLowerCase() === n.email.toLowerCase()));
+        if (missing.length > 0) {
+          for (const n of missing) {
+            const parts = (n.name || '').trim().split(/\s+/);
+            const firstName = parts[0] || n.name;
+            const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
+            const a: Attendee = {
+              id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              name: n.name,
+              firstName,
+              lastName,
+              email: n.email,
+              checkedIn: false,
+              registeredAt: n.registeredAt ? new Date(n.registeredAt) : new Date(),
+              skills: [],
+              teamStatus: 'needsTeam',
+            };
+            dispatch({ type: 'ADD_ATTENDEE', payload: a });
+          }
+        }
+        try { localStorage.setItem(flag, 'done'); } catch {}
+        consumeParam();
+      }
+
+      if (key === 'append-bounties-2025-09-06') {
+        const flag = 'migration-append-bounties-2025-09-06';
+        if (localStorage.getItem(flag) === 'done') { consumeParam(); return; }
+        const bountiesToAdd: Bounty[] = [
+          // AI Builders
+          {
+            id: `bounty-${Date.now()}-ab1`,
+            sponsorId: 'sponsor-aibuilders',
+            title: 'Fix Issue / Setup: Windows VPS 8GB RAM for Microservices Tool and Dashboard',
+            description: 'SSH and run Node/Docker; deploy MCP server web dashboard; enable Chrome browser screenshots; SSH fix.',
+            requirements: ['Windows VPS 8GB RAM', 'Node', 'Docker', 'MCP server dashboard', 'Chrome screenshots', 'SSH fix'],
+            prizes: [{ type: 'cash', amount: 60, currency: '€', details: '€60' }],
+            status: 'open',
+            category: 'aibuilders',
+          },
+          {
+            id: `bounty-${Date.now()}-ab2`,
+            sponsorId: 'sponsor-aibuilders',
+            title: 'AI Builders Page design or LinkTree (Sink) with QR + redirect tracking',
+            description: 'Design landing/linktree; integrate QR code generation and redirect tracking using Sink.',
+            requirements: ['Design', 'QR code', 'Redirect tracking'],
+            prizes: [{ type: 'cash', amount: 100, currency: '€', details: '€100' }],
+            githubUrl: 'https://github.com/arthurp1/Sink',
+            status: 'open',
+            category: 'aibuilders',
+          },
+          {
+            id: `bounty-${Date.now()}-ab3`,
+            sponsorId: 'sponsor-aibuilders',
+            title: 'Custom Sticker Maker - AI prompt to image editor (PixCut S1)',
+            description: 'Prompt-based sticker generator with gallery/editor; company logo mode and meme mode.',
+            requirements: ['AI image generation', 'Editor', 'Gallery'],
+            prizes: [{ type: 'cash', amount: 50, currency: '€', details: '€50' }],
+            status: 'open',
+            category: 'aibuilders',
+          },
+          {
+            id: `bounty-${Date.now()}-ab4`,
+            sponsorId: 'sponsor-aibuilders',
+            title: 'Create Events Market Research Tool (Browser-Use)',
+            description: 'Scrape Luma, Eventbrite, Meetup, conference sites using Browser-Use or alternative.',
+            requirements: ['Browser automation', 'Scraping', 'Aggregation'],
+            prizes: [{ type: 'cash', amount: 100, currency: '€', details: '€100' }],
+            githubUrl: 'https://github.com/browser-use/browser-use',
+            status: 'open',
+            category: 'aibuilders',
+          },
+          {
+            id: `bounty-${Date.now()}-ab5`,
+            sponsorId: 'sponsor-aibuilders',
+            title: 'Deploy WhatsApp Group API Unofficial Docker',
+            description: 'Deploy Whatsmeow / Evolution-API docker setup.',
+            requirements: ['Docker', 'WhatsApp API'],
+            prizes: [{ type: 'cash', amount: 40, currency: '€', details: '€40' }],
+            status: 'open',
+            category: 'aibuilders',
+          },
+          {
+            id: `bounty-${Date.now()}-ab6`,
+            sponsorId: 'sponsor-aibuilders',
+            title: 'Deploy LinkedIn scraper (MCP servers) on Windows VPS',
+            description: 'Deploy linkedin-mcp-server variants on Windows VPS.',
+            requirements: ['Windows VPS', 'MCP servers'],
+            prizes: [{ type: 'cash', amount: 50, currency: '€', details: '€50' }],
+            status: 'open',
+            category: 'aibuilders',
+          },
+          {
+            id: `bounty-${Date.now()}-ab7`,
+            sponsorId: 'sponsor-aibuilders',
+            title: 'Speaker AI optimizer for Slides/PDF',
+            description: 'Analyze slides for content suggestions, images, legibility, QR detection, etc.',
+            requirements: ['Slides analysis', 'PDF parsing', 'AI prompts'],
+            prizes: [{ type: 'cash', amount: 80, currency: '€', details: '€80' }],
+            status: 'open',
+            category: 'aibuilders',
+          },
+          {
+            id: `bounty-${Date.now()}-ab8`,
+            sponsorId: 'sponsor-aibuilders',
+            title: 'Deploy Matrix.org and bridges',
+            description: 'Deploy Matrix homeserver and bridges.',
+            requirements: ['Matrix.org', 'Bridges'],
+            prizes: [{ type: 'cash', amount: 80, currency: '€', details: '€80' }],
+            bountyPageUrl: 'https://www.youtube.com/watch?v=6zcrKJh0F_Y&t=1s',
+            status: 'open',
+            category: 'aibuilders',
+          },
+          // ActivePieces specific GitHub issues
+          {
+            id: `bounty-${Date.now()}-ap1`,
+            sponsorId: 'sponsor-activepieces',
+            title: 'Microsoft Teams',
+            description: 'Implement Microsoft Teams piece.',
+            requirements: ['ActivePieces'],
+            prizes: [{ type: 'cash', amount: 100, currency: '$', details: '$100' }],
+            githubUrl: 'https://github.com/activepieces/activepieces/issues/9067',
+            status: 'open',
+            category: 'activepieces',
+          },
+          {
+            id: `bounty-${Date.now()}-ap2`,
+            sponsorId: 'sponsor-activepieces',
+            title: 'Microsoft Outlook',
+            description: 'Implement Microsoft Outlook piece.',
+            requirements: ['ActivePieces'],
+            prizes: [{ type: 'cash', amount: 80, currency: '$', details: '$80' }],
+            githubUrl: 'https://github.com/activepieces/activepieces/issues/9065',
+            status: 'open',
+            category: 'activepieces',
+          },
+          {
+            id: `bounty-${Date.now()}-ap3`,
+            sponsorId: 'sponsor-activepieces',
+            title: 'Wonderchat',
+            description: 'Implement Wonderchat piece.',
+            requirements: ['ActivePieces'],
+            prizes: [{ type: 'cash', amount: 30, currency: '$', details: '$30' }],
+            githubUrl: 'https://github.com/activepieces/activepieces/issues/9055',
+            status: 'open',
+            category: 'activepieces',
+          },
+          {
+            id: `bounty-${Date.now()}-ap4`,
+            sponsorId: 'sponsor-activepieces',
+            title: 'TextCortex AI',
+            description: 'Implement TextCortex AI piece.',
+            requirements: ['ActivePieces'],
+            prizes: [{ type: 'cash', amount: 50, currency: '$', details: '$50' }],
+            githubUrl: 'https://github.com/activepieces/activepieces/issues/9052',
+            status: 'open',
+            category: 'activepieces',
+          },
+          {
+            id: `bounty-${Date.now()}-ap5`,
+            sponsorId: 'sponsor-activepieces',
+            title: 'DocsBot',
+            description: 'Implement DocsBot piece.',
+            requirements: ['ActivePieces'],
+            prizes: [{ type: 'cash', amount: 30, currency: '$', details: '$30' }],
+            githubUrl: 'https://github.com/activepieces/activepieces/issues/9049',
+            status: 'open',
+            category: 'activepieces',
+          },
+          {
+            id: `bounty-${Date.now()}-ap6`,
+            sponsorId: 'sponsor-activepieces',
+            title: 'Browserless',
+            description: 'Implement Browserless piece.',
+            requirements: ['ActivePieces'],
+            prizes: [{ type: 'cash', amount: 40, currency: '$', details: '$40' }],
+            githubUrl: 'https://github.com/activepieces/activepieces/issues/9012',
+            status: 'open',
+            category: 'activepieces',
+          },
+          {
+            id: `bounty-${Date.now()}-ap7`,
+            sponsorId: 'sponsor-activepieces',
+            title: 'WebScraping.AI',
+            description: 'Implement WebScraping.AI piece.',
+            requirements: ['ActivePieces'],
+            prizes: [{ type: 'cash', amount: 40, currency: '$', details: '$40' }],
+            githubUrl: 'https://github.com/activepieces/activepieces/issues/9011',
+            status: 'open',
+            category: 'activepieces',
+          },
+          {
+            id: `bounty-${Date.now()}-ap8`,
+            sponsorId: 'sponsor-activepieces',
+            title: 'Wealthbox CRM',
+            description: 'Implement Wealthbox CRM piece.',
+            requirements: ['ActivePieces'],
+            prizes: [{ type: 'cash', amount: 100, currency: '$', details: '$100' }],
+            githubUrl: 'https://github.com/activepieces/activepieces/issues/8981',
+            status: 'open',
+            category: 'activepieces',
+          },
+          {
+            id: `bounty-${Date.now()}-ap9`,
+            sponsorId: 'sponsor-activepieces',
+            title: 'Toggl Track',
+            description: 'Implement Toggl Track piece.',
+            requirements: ['ActivePieces'],
+            prizes: [{ type: 'cash', amount: 100, currency: '$', details: '$100' }],
+            githubUrl: 'https://github.com/activepieces/activepieces/issues/8975',
+            status: 'open',
+            category: 'activepieces',
+          },
+          {
+            id: `bounty-${Date.now()}-ap10`,
+            sponsorId: 'sponsor-activepieces',
+            title: 'Netlify',
+            description: 'Implement Netlify piece.',
+            requirements: ['ActivePieces'],
+            prizes: [{ type: 'cash', amount: 50, currency: '$', details: '$50' }],
+            githubUrl: 'https://github.com/activepieces/activepieces/issues/8974',
+            status: 'open',
+            category: 'activepieces',
+          },
+        ];
+        // Append if missing by title+category
+        const existing = new Set(state.bounties.map(b => `${b.title}::${b.category}`));
+        bountiesToAdd.forEach(b => {
+          if (!existing.has(`${b.title}::${b.category}`)) {
+            dispatch({ type: 'ADD_BOUNTY', payload: b });
+          }
+        });
+        try { localStorage.setItem(flag, 'done'); } catch {}
+        consumeParam();
+      }
+    })();
+  }, [hydrated, state.attendees, state.bounties]);
 
   // Mock API functions
   const login = async (user: User): Promise<void> => {
@@ -1231,6 +1535,7 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
     updateProject,
     createProject,
     deleteProject,
+    createAttendee,
     updateAttendee,
     checkInAttendee,
     updateBounty,
