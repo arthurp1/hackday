@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { hasNeon, loadStateFromDB, saveStateToDB } from '../lib/neonStore';
-import { hasSupabase, supabase } from '../lib/supabaseClient';
 
 // Types
 export type UserType = 'host' | 'sponsor' | 'hacker';
@@ -593,40 +592,12 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
     loadSession();
     (async () => {
       try {
-        // Prefer Supabase for bounties/challenges/goodies if configured
-        const syncFromSupabase = async () => {
-          if (!hasSupabase()) return;
-          // Read challenges
-          try {
-            const { data: ch, error: chErr } = await supabase.from('challenges').select('*');
-            if (!chErr && Array.isArray(ch)) {
-              dispatch({ type: 'SET_CHALLENGES', payload: ch as any });
-            }
-          } catch {}
-          // Read bounties
-          try {
-            const { data: bo, error: boErr } = await supabase.from('bounties').select('*');
-            if (!boErr && Array.isArray(bo)) {
-              dispatch({ type: 'SET_BOUNTIES', payload: bo as any });
-            }
-          } catch {}
-          // Read goodies
-          try {
-            const { data: go, error: goErr } = await supabase.from('goodies').select('*');
-            if (!goErr && Array.isArray(go)) {
-              dispatch({ type: 'SET_GOODIES', payload: go as any });
-            }
-          } catch {}
-        };
-        await syncFromSupabase();
         // 1) Try Neon
         if (hasNeon()) {
           const dbState = await loadStateFromDB();
           if (dbState) {
             await importStateJson(JSON.stringify(dbState));
             setHydrated(true);
-            // After hydration from Neon, prefer Supabase data for sponsor-managed entities if present
-            await syncFromSupabase();
             return;
           }
         }
@@ -639,8 +610,6 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
             try { await saveStateToDB(JSON.parse(persisted)); } catch {}
           }
           setHydrated(true);
-          // After hydration from local snapshot, prefer Supabase data for sponsor-managed entities if present
-          await syncFromSupabase();
           return;
         }
         // 3) One-time migration from assets/state.json (or assets/backup.json) → import + save to Neon and LS
@@ -874,12 +843,7 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
   const updateBounty = async (id: string, updates: Partial<Bounty>): Promise<{ success: boolean }> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      if (hasSupabase()) {
-        const { error } = await supabase.from('bounties').update(updates as any).eq('id', id);
-        if (error) throw error;
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 400));
-      }
+      await new Promise(resolve => setTimeout(resolve, 400));
       dispatch({ type: 'UPDATE_BOUNTY', payload: { id, updates } });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true };
@@ -893,16 +857,11 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
   const createBounty = async (bounty: Omit<Bounty, 'id'>): Promise<{ success: boolean; id: string }> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      let newId = `bounty-${Date.now()}`;
-      if (hasSupabase()) {
-        const insert = { ...bounty } as any;
-        const { data, error } = await supabase.from('bounties').insert(insert).select('id').single();
-        if (error) throw error;
-        newId = (data as any)?.id || newId;
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      const newBounty: Bounty = { ...(bounty as any), id: newId } as Bounty;
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const newBounty: Bounty = {
+        ...bounty,
+        id: `bounty-${Date.now()}`
+      };
       dispatch({ type: 'ADD_BOUNTY', payload: newBounty });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true, id: newBounty.id };
@@ -933,16 +892,11 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
   const createChallenge = async (challenge: Omit<Challenge, 'id'>): Promise<{ success: boolean; id: string }> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      let newId = `challenge-${Date.now()}`;
-      if (hasSupabase()) {
-        const insert = { ...challenge } as any;
-        const { data, error } = await supabase.from('challenges').insert(insert).select('id').single();
-        if (error) throw error;
-        newId = (data as any)?.id || newId;
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      const newChallenge: Challenge = { ...(challenge as any), id: newId } as Challenge;
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const newChallenge: Challenge = {
+        ...challenge,
+        id: `challenge-${Date.now()}`
+      };
       dispatch({ type: 'ADD_CHALLENGE', payload: newChallenge });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true, id: newChallenge.id };
@@ -956,12 +910,7 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
   const updateChallenge = async (id: string, updates: Partial<Challenge>): Promise<{ success: boolean }> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      if (hasSupabase()) {
-        const { error } = await supabase.from('challenges').update(updates as any).eq('id', id);
-        if (error) throw error;
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 400));
-      }
+      await new Promise(resolve => setTimeout(resolve, 400));
       dispatch({ type: 'UPDATE_CHALLENGE', payload: { id, updates } });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true };
@@ -989,16 +938,11 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
   const createGoodie = async (goodie: Omit<Goodie, 'id'>): Promise<{ success: boolean; id: string }> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      let newId = `goodie-${Date.now()}`;
-      if (hasSupabase()) {
-        const insert = { ...goodie } as any;
-        const { data, error } = await supabase.from('goodies').insert(insert).select('id').single();
-        if (error) throw error;
-        newId = (data as any)?.id || newId;
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      const newGoodie: Goodie = { ...(goodie as any), id: newId } as Goodie;
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const newGoodie: Goodie = {
+        ...goodie,
+        id: `goodie-${Date.now()}`
+      };
       dispatch({ type: 'ADD_GOODIE', payload: newGoodie });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true, id: newGoodie.id };
@@ -1012,12 +956,7 @@ export const HackathonProvider: React.FC<{ children: ReactNode }> = ({ children 
   const updateGoodie = async (id: string, updates: Partial<Goodie>): Promise<{ success: boolean }> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      if (hasSupabase()) {
-        const { error } = await supabase.from('goodies').update(updates as any).eq('id', id);
-        if (error) throw error;
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 400));
-      }
+      await new Promise(resolve => setTimeout(resolve, 400));
       dispatch({ type: 'UPDATE_GOODIE', payload: { id, updates } });
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true };
